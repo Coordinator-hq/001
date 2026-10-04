@@ -97,7 +97,6 @@ export const TeamScreen: React.FC<TeamScreenProps> = ({
       teamName: team.name,
       teamId: team.id,
       teamTag: team.tag,
-      teamLogo: team.logoUrl,
       onSuccess: (response) => {
         setIsProcessing(false);
         const creditedAmount = response.amount || amount;
@@ -135,44 +134,26 @@ export const TeamScreen: React.FC<TeamScreenProps> = ({
       {/* Main Team Hero Banner in Gold & Cursive */}
       <div className="bg-slate-900/95 border border-amber-500/40 rounded-3xl p-6 md:p-8 shadow-2xl relative overflow-hidden">
         <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-          <div className="flex items-center gap-4">
-            {team.logoUrl ? (
-              <img
-                src={team.logoUrl}
-                alt={team.name}
-                referrerPolicy="no-referrer"
-                className="w-20 h-20 md:w-24 md:h-24 rounded-2xl object-cover border-2 border-amber-400/60 shadow-lg shrink-0"
-              />
-            ) : (
-              <div
-                className="w-20 h-20 md:w-24 md:h-24 rounded-2xl flex items-center justify-center text-3xl font-black text-amber-300 shrink-0 shadow-lg border-2 border-amber-400/60"
-                style={{ backgroundColor: team.primaryColor || '#1e1b4b' }}
-              >
+          <div>
+            <div className="flex items-center gap-3">
+              <h1 className="text-3xl md:text-5xl font-black text-amber-400 tracking-wide drop-shadow">
+                {team.name}
+              </h1>
+              <span className="text-sm font-bold bg-amber-400 text-slate-950 px-2.5 py-0.5 rounded-lg shadow-sm">
                 {team.tag}
-              </div>
-            )}
+              </span>
+            </div>
 
-            <div>
-              <div className="flex items-center gap-2.5">
-                <h1 className="text-3xl md:text-5xl font-black text-amber-400 tracking-wide drop-shadow">
-                  {team.name}
-                </h1>
-                <span className="text-sm font-bold bg-amber-400 text-slate-950 px-2.5 py-0.5 rounded-lg shadow-sm">
-                  {team.tag}
-                </span>
-              </div>
+            <p className="text-lg md:text-xl text-amber-300/90 italic mt-1 font-cursive">
+              "{team.slogan}"
+            </p>
 
-              <p className="text-lg md:text-xl text-amber-300/90 italic mt-1 font-cursive">
-                "{team.slogan}"
-              </p>
-
-              <div className="flex items-center gap-3 text-base text-amber-400/90 mt-2">
-                <span className="font-extrabold text-amber-300">
-                  Rank #{rank} of {totalTeams}
-                </span>
-                <span aria-hidden="true">·</span>
-                <span className="font-bold">{team.fanCount.toLocaleString()} Total Contributions</span>
-              </div>
+            <div className="flex items-center gap-3 text-base text-amber-400/90 mt-2">
+              <span className="font-extrabold text-amber-300">
+                Rank #{rank} of {totalTeams}
+              </span>
+              <span aria-hidden="true">·</span>
+              <span className="font-bold">{team.fanCount.toLocaleString()} Total Contributions</span>
             </div>
           </div>
 

@@ -7,7 +7,6 @@ export interface FlutterwavePaymentConfig {
   teamName: string;
   teamId: string;
   teamTag?: string;
-  teamLogo?: string;
   onSuccess: (response: { transaction_id: string; tx_ref: string; amount: number; status: string }) => void;
   onClose?: () => void;
 }
@@ -42,8 +41,7 @@ export function initiateFlutterwavePayment(config: FlutterwavePaymentConfig) {
     },
     customizations: {
       title: `${config.teamName} - Pot Contribution`,
-      description: `Contribution to ${config.teamName} Leaderboard Pot (₦${config.amount.toLocaleString()})`,
-      logo: config.teamLogo || 'https://checkout.flutterwave.com/assets/img/rave-logo.png',
+      description: `Contribution to ${config.teamName} Leaderboard Pot (₦${config.amount.toLocaleString()})`
     },
     meta: {
       team_id: config.teamId,
@@ -51,7 +49,7 @@ export function initiateFlutterwavePayment(config: FlutterwavePaymentConfig) {
       team_tag: config.teamTag || '',
       pot_amount_ngn: config.amount,
       contribution_timestamp: new Date().toISOString(),
-      platform: 'Apex Leaderboard Championship'
+      platform: '001 Championship'
     },
     callback: function (data: { transaction_id?: string; tx_ref?: string; amount?: number; status?: string }) {
       if (data.status === 'successful' || data.status === 'completed' || !data.status) {
