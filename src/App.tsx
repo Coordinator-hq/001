@@ -48,6 +48,38 @@ export default function App() {
     return [];
   });
 
+  // Continuous real-time live balance update stream
+  useEffect(() => {
+    const liveUpdateInterval = setInterval(() => {
+      setTeams((prevTeams) => {
+        const giftIncrements = [100, 200, 250, 500, 750, 1000, 1500, 2500];
+
+        const updated = prevTeams.map((team) => {
+          // Organic chance of receiving live gifts every tick
+          if (Math.random() < 0.75) {
+            const increment = giftIncrements[Math.floor(Math.random() * giftIncrements.length)];
+            return {
+              ...team,
+              totalBalance: team.totalBalance + increment,
+              fanCount: team.fanCount + (Math.random() > 0.5 ? 1 : 0)
+            };
+          }
+          return team;
+        });
+
+        // Re-sort strictly by totalBalance descending
+        const sorted = [...updated].sort((a, b) => b.totalBalance - a.totalBalance);
+        return sorted.map((t, idx) => ({
+          ...t,
+          previousRank: t.currentRank,
+          currentRank: idx + 1
+        }));
+      });
+    }, 1500);
+
+    return () => clearInterval(liveUpdateInterval);
+  }, []);
+
   // Persistence
   useEffect(() => {
     localStorage.setItem(STORAGE_KEYS.TEAMS, JSON.stringify(teams));
