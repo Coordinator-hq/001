@@ -23,7 +23,7 @@ export const LiveFanTicker: React.FC<LiveFanTickerProps> = ({ events }) => {
       <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
         {events.length === 0 ? (
           <div className="text-xs text-slate-500 text-center py-6">
-            Awaiting upcoming live fan contributions...
+            Awaiting upcoming live fan gifts...
           </div>
         ) : (
           events.slice(0, 15).map((evt) => {

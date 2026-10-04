@@ -85,12 +85,12 @@ export default function App() {
     const newEvt: FanActivityEvent = {
       id: `evt_fw_${Date.now()}`,
       timestamp: Date.now(),
-      fanName: 'Contributor',
+      fanName: 'Gifter',
       amount: amount,
       teamId: teamId,
-      teamName: targetTeam?.name || 'Franchise',
+      teamName: targetTeam?.name || 'Team',
       eventType: amount >= 5000 ? 'whale' : 'donation',
-      message: 'Contributed to the pot!'
+      message: 'Gifted to the pot!'
     };
 
     setLiveEvents((prev) => [newEvt, ...prev.slice(0, 39)]);

@@ -36,19 +36,19 @@ export function initiateFlutterwavePayment(config: FlutterwavePaymentConfig) {
     currency: 'NGN',
     payment_options: 'card,banktransfer,ussd,mobilemoney,qr',
     customer: {
-      email: config.customerEmail || `fan_${Date.now()}@apexleaderboard.com`,
-      name: config.customerName || 'Anonymous Contributor',
+      email: config.customerEmail || `fan_${Date.now()}@001leaderboard.com`,
+      name: config.customerName || 'Anonymous Gifter',
     },
     customizations: {
-      title: `${config.teamName} - Pot Contribution`,
-      description: `Contribution to ${config.teamName} Leaderboard Pot (₦${config.amount.toLocaleString()})`
+      title: `${config.teamName} - Pot Gift`,
+      description: `Gift to ${config.teamName} Leaderboard Pot (₦${config.amount.toLocaleString()})`
     },
     meta: {
       team_id: config.teamId,
       team_name: config.teamName,
       team_tag: config.teamTag || '',
       pot_amount_ngn: config.amount,
-      contribution_timestamp: new Date().toISOString(),
+      gift_timestamp: new Date().toISOString(),
       platform: '001 Championship'
     },
     callback: function (data: { transaction_id?: string; tx_ref?: string; amount?: number; status?: string }) {

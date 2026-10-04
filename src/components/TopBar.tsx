@@ -56,7 +56,7 @@ export const TopBar: React.FC<TopBarProps> = ({
               onClaimDailyFaucet();
               soundManager.playCoin();
             }}
-            title="Get +$500 Free Fan Balance to contribute"
+            title="Get +$500 Free Fan Balance to send gifts"
             className="px-3 py-1.5 bg-gradient-to-r from-amber-500 to-yellow-400 text-slate-950 font-bold text-xs rounded-xl hover:brightness-110 transition-all flex items-center gap-1.5 shadow-sm shadow-amber-500/20 whitespace-nowrap cursor-pointer"
           >
             <Sparkles className="w-3.5 h-3.5" />

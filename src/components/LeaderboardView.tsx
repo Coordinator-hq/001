@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Trophy, Search } from 'lucide-react';
 import { Team } from '../types/game';
+import { DailyTimer } from './DailyTimer';
 
 interface LeaderboardViewProps {
   teams: Team[];
@@ -44,6 +45,9 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
           />
         </div>
       </div>
+
+      {/* 24-Hour Countdown Timer starting at 00:00 AM GMT+1 */}
+      <DailyTimer />
 
       {/* Elongated Horizontal Team Boxes with Pure Gold Cursive Typography */}
       <div className="space-y-4">
