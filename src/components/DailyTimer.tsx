@@ -21,7 +21,7 @@ export const DailyTimer: React.FC<DailyTimerProps> = ({ className = '' }) => {
       const gmtPlusOneMs = nowUtcMs + (1 * 60 * 60 * 1000);
       const gmtPlusOneDate = new Date(gmtPlusOneMs);
 
-      // Target is next 00:00:00 AM GMT+1 (24:00:00 of current day in GMT+1)
+      // Next 00:00:00 in GMT+1
       const nextMidnightGmtPlusOne = new Date(gmtPlusOneDate);
       nextMidnightGmtPlusOne.setUTCHours(24, 0, 0, 0);
 
@@ -45,14 +45,9 @@ export const DailyTimer: React.FC<DailyTimerProps> = ({ className = '' }) => {
   }, []);
 
   return (
-    <div className={`flex flex-wrap items-center justify-between gap-3 bg-slate-900/90 border border-amber-500/40 rounded-2xl px-5 py-3.5 shadow-xl ${className}`}>
-      <div className="flex items-center gap-2 text-amber-400">
-        <Timer className="w-5 h-5 text-amber-400 animate-pulse shrink-0" />
-        <span className="text-base sm:text-lg font-bold font-cursive tracking-wide">
-          24hr Round Reset:
-        </span>
-      </div>
-      <div className="flex items-center gap-1.5 font-mono font-black text-lg sm:text-2xl text-amber-300 drop-shadow">
+    <div className={`flex items-center justify-center gap-3 bg-slate-900/95 border border-amber-500/40 rounded-2xl py-3 px-6 shadow-xl w-fit mx-auto ${className}`}>
+      <Timer className="w-5 h-5 text-amber-400 shrink-0" />
+      <div className="flex items-center gap-2 font-mono font-black text-xl sm:text-2xl text-amber-300 drop-shadow">
         <span className="bg-slate-950 px-2.5 py-1 rounded-xl border border-amber-500/30">
           {timeLeft.hours}h
         </span>
@@ -64,9 +59,6 @@ export const DailyTimer: React.FC<DailyTimerProps> = ({ className = '' }) => {
         <span className="bg-slate-950 px-2.5 py-1 rounded-xl border border-amber-500/30 text-amber-400">
           {timeLeft.seconds}s
         </span>
-      </div>
-      <div className="text-xs text-amber-400/80 font-sans tracking-wide">
-        Starts 00:00 AM GMT+1
       </div>
     </div>
   );
