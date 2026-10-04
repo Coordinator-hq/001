@@ -144,10 +144,6 @@ export const TeamScreen: React.FC<TeamScreenProps> = ({
               </span>
             </div>
 
-            <p className="text-lg md:text-xl text-amber-300/90 italic mt-1 font-cursive">
-              "{team.slogan}"
-            </p>
-
             <div className="flex items-center gap-3 text-base text-amber-400/90 mt-2">
               <span className="font-extrabold text-amber-300">
                 Rank #{rank} of {totalTeams}

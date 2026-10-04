@@ -15,8 +15,8 @@ import {
 } from './data/initialLeagueData';
 
 const STORAGE_KEYS = {
-  TEAMS: 'apex_teams_v5',
-  EVENTS: 'apex_events_v5'
+  TEAMS: 'apex_teams_v6',
+  EVENTS: 'apex_events_v6'
 };
 
 export default function App() {

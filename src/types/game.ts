@@ -22,7 +22,7 @@ export interface Team {
   id: string;
   name: string;
   tag: string;
-  slogan: string;
+  slogan?: string;
   primaryColor: string;
   accentColor: string;
   bgGradient: string;
@@ -34,7 +34,7 @@ export interface Team {
   boostMultiplier: number;
   passiveIncomePerSec: number;
   players: Player[];
-  bio: string;
+  bio?: string;
   championshipWins: number;
   isUserFavored?: boolean;
 }
