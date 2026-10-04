@@ -1,0 +1,31 @@
+@import "tailwindcss";
+
+@layer base {
+  body {
+    font-family: 'Dancing Script', 'Playball', 'Plus Jakarta Sans', cursive, sans-serif;
+    background-color: #020617;
+    color: #fbbf24;
+  }
+}
+
+.font-display {
+  font-family: 'Dancing Script', 'Playball', cursive, sans-serif;
+}
+
+.font-cursive {
+  font-family: 'Dancing Script', 'Playball', 'Great Vibes', cursive, sans-serif;
+}
+
+.text-gold-gradient {
+  background: linear-gradient(135deg, #FFFBEB 0%, #FBBF24 50%, #D97706 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.gold-glow {
+  box-shadow: 0 0 25px rgba(245, 158, 11, 0.25);
+}
+
+.gold-border {
+  border-color: rgba(245, 158, 11, 0.4);
+}
