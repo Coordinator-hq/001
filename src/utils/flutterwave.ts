@@ -36,12 +36,12 @@ export function initiateFlutterwavePayment(config: FlutterwavePaymentConfig) {
     currency: 'NGN',
     payment_options: 'card,banktransfer,ussd,mobilemoney,qr',
     customer: {
-      email: config.customerEmail || `fan_${Date.now()}@001leaderboard.com`,
+      email: config.customerEmail || `fan_${Date.now()}@fanbrawl.com`,
       name: config.customerName || 'Anonymous Gifter',
     },
     customizations: {
-      title: `${config.teamName} - Pot Gift`,
-      description: `Gift to ${config.teamName} Leaderboard Pot (₦${config.amount.toLocaleString()})`
+      title: `${config.teamName} - FanBrawl Gift`,
+      description: `Gift to ${config.teamName} on FanBrawl (₦${config.amount.toLocaleString()})`
     },
     meta: {
       team_id: config.teamId,
@@ -49,7 +49,7 @@ export function initiateFlutterwavePayment(config: FlutterwavePaymentConfig) {
       team_tag: config.teamTag || '',
       pot_amount_ngn: config.amount,
       gift_timestamp: new Date().toISOString(),
-      platform: '001 Championship'
+      platform: 'FanBrawl'
     },
     callback: function (data: { transaction_id?: string; tx_ref?: string; amount?: number; status?: string }) {
       if (data.status === 'successful' || data.status === 'completed' || !data.status) {

@@ -1,6 +1,6 @@
 {
-  "name": "001",
-  "description": "001 — Live Leaderboard and Team Pot Championship.",
+  "name": "FanBrawl",
+  "description": "FanBrawl — Live Head-to-Head Fan Battles and Real-Time Gifting.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

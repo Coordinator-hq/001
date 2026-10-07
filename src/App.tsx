@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { LeaderboardView } from './components/LeaderboardView';
+import { VersusView } from './components/VersusView';
 import { TeamScreen } from './components/TeamScreen';
 import { 
   Team, 
@@ -136,8 +136,8 @@ export default function App() {
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-amber-500 selection:text-slate-950 p-4 md:p-8">
       <main className="max-w-4xl mx-auto">
         {!selectedTeamId ? (
-          /* Leaderboard Main View: Just the leaderboard with team names and total balance */
-          <LeaderboardView
+          /* Head-to-Head Versus Main View with 10-Min auto-resetting timers */
+          <VersusView
             teams={teams}
             onSelectTeam={(team) => {
               setSelectedTeamId(team.id);
@@ -148,8 +148,6 @@ export default function App() {
           /* Dedicated Team Screen with Flutterwave Payment Gateway */
           <TeamScreen
             team={currentSelectedTeam}
-            rank={currentTeamRank}
-            totalTeams={teams.length}
             onBack={() => {
               setSelectedTeamId(null);
               window.scrollTo({ top: 0, behavior: 'smooth' });

@@ -7,16 +7,12 @@ import { initiateFlutterwavePayment } from '../utils/flutterwave';
 
 interface TeamScreenProps {
   team: Team;
-  rank: number;
-  totalTeams: number;
   onBack: () => void;
   onPaymentSuccess: (teamId: string, amount: number) => void;
 }
 
 export const TeamScreen: React.FC<TeamScreenProps> = ({
   team,
-  rank,
-  totalTeams,
   onBack,
   onPaymentSuccess
 }) => {
@@ -27,7 +23,7 @@ export const TeamScreen: React.FC<TeamScreenProps> = ({
   const [successAmount, setSuccessAmount] = useState<number>(0);
   const [errorMessage, setErrorMessage] = useState<string>('');
 
-  // Touch swipe-right tracking to navigate back to leaderboard
+  // Touch swipe-right tracking to navigate back
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
 
   useEffect(() => {
@@ -43,14 +39,19 @@ export const TeamScreen: React.FC<TeamScreenProps> = ({
     const handleTouchEnd = (e: TouchEvent) => {
       if (!touchStartRef.current || e.changedTouches.length === 0) return;
       
-      const deltaX = e.changedTouches[0].clientX - touchStartRef.current.x;
-      const deltaY = e.changedTouches[0].clientY - touchStartRef.current.y;
-      
-      // Swipe Right detection: horizontally right by at least 65px and predominantly horizontal
-      if (deltaX > 65 && Math.abs(deltaX) > Math.abs(deltaY) * 1.3) {
+      const touchEnd = {
+        x: e.changedTouches[0].clientX,
+        y: e.changedTouches[0].clientY,
+      };
+
+      const deltaX = touchEnd.x - touchStartRef.current.x;
+      const deltaY = touchEnd.y - touchStartRef.current.y;
+
+      // Detect deliberate horizontal right swipe (>= 75px) with minimal vertical drift
+      if (deltaX > 75 && Math.abs(deltaY) < 60) {
         onBack();
       }
-      
+
       touchStartRef.current = null;
     };
 
@@ -63,8 +64,7 @@ export const TeamScreen: React.FC<TeamScreenProps> = ({
     };
   }, [onBack]);
 
-  // Naira Presets
-  const presets = [500, 1000, 2500, 5000, 10000, 25000, 50000];
+  const presetAmounts = [500, 1000, 2500, 5000, 10000, 25000];
 
   const handleSelectPreset = (val: number) => {
     setAmount(val);
@@ -73,44 +73,52 @@ export const TeamScreen: React.FC<TeamScreenProps> = ({
   };
 
   const handleCustomChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value.replace(/\D/g, '');
-    setCustomAmount(val);
-    const num = parseInt(val, 10) || 0;
-    setAmount(num);
+    const rawVal = e.target.value.replace(/[^0-9]/g, '');
+    setCustomAmount(rawVal);
+    const num = parseInt(rawVal, 10);
+    if (!isNaN(num)) {
+      setAmount(num);
+    } else {
+      setAmount(0);
+    }
     setErrorMessage('');
   };
 
   const handlePay = (e: React.FormEvent) => {
     e.preventDefault();
     if (amount <= 0) {
-      setErrorMessage('Please enter a valid gift amount.');
+      setErrorMessage('Please enter a valid gift amount (minimum ₦100).');
+      return;
+    }
+    if (amount < 100) {
+      setErrorMessage('Minimum gift amount is ₦100.');
       return;
     }
 
-    setErrorMessage('');
     setIsProcessing(true);
+    setErrorMessage('');
 
+    // Initiate Real Flutterwave Payment Modal
     initiateFlutterwavePayment({
       amount: amount,
-      customerEmail: `gifter_${Date.now()}@001leaderboard.com`,
-      customerName: 'Anonymous Gifter',
-      teamName: team.name,
       teamId: team.id,
-      teamTag: team.tag,
+      teamName: team.name,
+      customerEmail: 'fan@001league.app',
+      customerName: 'Fan Supporter',
       onSuccess: (response) => {
         setIsProcessing(false);
-        const creditedAmount = response.amount || amount;
-        onPaymentSuccess(team.id, creditedAmount);
-
-        setSuccessAmount(creditedAmount);
         setIsSuccess(true);
-        if (creditedAmount >= 5000) {
-          soundManager.playWhaleDrop();
-          triggerConfetti(['#F59E0B', '#10B981', '#6366F1', '#EC4899']);
-        } else {
-          soundManager.playCoin();
-        }
-        setTimeout(() => setIsSuccess(false), 5000);
+        setSuccessAmount(amount);
+        soundManager.playLevelUp();
+        triggerConfetti();
+
+        // Credit to the team pot state
+        onPaymentSuccess(team.id, amount);
+
+        // Reset success modal after 4s
+        setTimeout(() => {
+          setIsSuccess(false);
+        }, 4000);
       },
       onClose: () => {
         setIsProcessing(false);
@@ -124,10 +132,10 @@ export const TeamScreen: React.FC<TeamScreenProps> = ({
       <div className="flex items-center justify-between">
         <button
           onClick={onBack}
-          className="px-4 py-2 bg-slate-900 hover:bg-slate-850 text-amber-300 hover:text-amber-200 border border-amber-500/40 hover:border-amber-400 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-md"
+          className="px-4 py-2 bg-slate-900 hover:bg-slate-850 text-amber-300 hover:text-amber-200 border border-amber-500/40 hover:border-amber-400 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-md uppercase"
         >
           <ArrowLeft className="w-3.5 h-3.5 text-amber-400" />
-          <span>Back to Leaderboard</span>
+          <span>Back to Battle</span>
         </button>
       </div>
 
@@ -136,19 +144,15 @@ export const TeamScreen: React.FC<TeamScreenProps> = ({
         <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2.5">
-              <h1 className="text-2xl sm:text-3xl md:text-4xl font-black text-amber-400 tracking-wide drop-shadow">
+              <h1 className="text-2xl sm:text-3xl md:text-4xl font-black text-amber-400 tracking-wide drop-shadow uppercase">
                 {team.name}
               </h1>
-              <span className="text-xs font-bold bg-amber-400 text-slate-950 px-2 py-0.5 rounded shadow-sm">
+              <span className="text-xs font-bold bg-amber-400 text-slate-950 px-2 py-0.5 rounded shadow-sm uppercase">
                 {team.tag}
               </span>
             </div>
 
             <div className="flex items-center gap-2 text-xs sm:text-sm text-amber-400/90 mt-1.5 font-cursive">
-              <span className="font-bold text-amber-300">
-                Rank #{rank} of {totalTeams}
-              </span>
-              <span aria-hidden="true">·</span>
               <span className="font-medium">{team.fanCount.toLocaleString()} Total Gifts</span>
             </div>
           </div>
@@ -160,9 +164,6 @@ export const TeamScreen: React.FC<TeamScreenProps> = ({
             </span>
             <div className="text-2xl sm:text-3xl font-black text-amber-300 tabular-nums mt-0.5 drop-shadow font-cursive">
               ₦{team.totalBalance.toLocaleString()}
-            </div>
-            <div className="text-[11px] text-amber-500/70 mt-0.5 font-sans">
-              Verified 001 Pot Balance
             </div>
           </div>
         </div>
@@ -179,72 +180,77 @@ export const TeamScreen: React.FC<TeamScreenProps> = ({
               </label>
             </div>
 
-            {/* Presets with Compact Gold Highlighting */}
-            <div className="grid grid-cols-4 sm:grid-cols-7 gap-2">
-              {presets.map((preset) => (
+            <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+              {presetAmounts.map((val) => (
                 <button
-                  key={preset}
+                  key={val}
                   type="button"
-                  onClick={() => handleSelectPreset(preset)}
-                  className={`py-2 px-1 rounded-lg border text-center transition-all cursor-pointer font-cursive ${
-                    amount === preset
-                      ? 'bg-gradient-to-b from-amber-400 via-yellow-400 to-amber-500 text-slate-950 font-black border-yellow-200 shadow-md shadow-amber-500/25 text-xs sm:text-sm scale-105'
-                      : 'bg-slate-950 border-amber-500/30 text-amber-300 hover:border-amber-400 text-xs sm:text-sm font-bold'
+                  onClick={() => handleSelectPreset(val)}
+                  className={`py-2 px-2 text-center rounded-xl text-xs sm:text-sm font-bold border transition-all cursor-pointer ${
+                    amount === val && customAmount === val.toString()
+                      ? 'bg-amber-400 text-slate-950 font-black border-amber-300 shadow-md scale-[1.02]'
+                      : 'bg-slate-950 text-amber-300 border-amber-500/30 hover:border-amber-400'
                   }`}
                 >
-                  ₦{preset.toLocaleString()}
+                  ₦{val.toLocaleString()}
                 </button>
               ))}
             </div>
+          </div>
 
-            {/* Custom Input */}
-            <div className="mt-3 relative">
-              <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-amber-400 text-sm font-bold font-cursive">
+          {/* Custom Amount Input in Naira */}
+          <div>
+            <label className="block text-xs font-bold text-amber-400/90 uppercase tracking-wide mb-1">
+              Or Custom Gift (₦)
+            </label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-bold text-amber-400">
                 ₦
               </span>
               <input
                 type="text"
                 value={customAmount}
                 onChange={handleCustomChange}
-                placeholder="Or enter custom gift amount in Naira..."
-                className="w-full bg-slate-950 border border-amber-500/40 rounded-xl pl-9 pr-3 py-2.5 text-sm sm:text-base font-bold text-amber-300 placeholder-amber-500/50 focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400 font-cursive"
+                placeholder="Enter amount"
+                className="w-full bg-slate-950 border border-amber-500/40 focus:border-amber-400 focus:ring-1 focus:ring-amber-400 rounded-xl pl-8 pr-3 py-2 text-sm font-cursive text-amber-300 placeholder-amber-500/40 outline-none transition-all"
               />
             </div>
           </div>
 
-          {/* Error / Success Feedback in Gold */}
           {errorMessage && (
-            <div className="text-xs text-rose-400 font-bold">
+            <div className="p-2.5 rounded-xl bg-red-950/80 border border-red-500/40 text-red-300 text-xs">
               {errorMessage}
             </div>
           )}
 
-          {isSuccess && (
-            <div className="p-3 bg-amber-500/15 border border-amber-400 rounded-xl text-xs sm:text-sm text-amber-300 font-bold flex items-center gap-2 shadow-md">
-              <CheckCircle2 className="w-4 h-4 text-amber-400 shrink-0" />
-              <span>
-                Gift sent successfully! Gifted ₦{successAmount.toLocaleString()} to {team.name}'s pot!
-              </span>
-            </div>
-          )}
-
-          {/* Send Gift Button */}
+          {/* Action Button */}
           <button
             type="submit"
-            disabled={amount <= 0 || isProcessing}
-            className={`w-full py-3 px-5 rounded-xl font-bold text-sm sm:text-base tracking-wide transition-all flex items-center justify-center gap-2 cursor-pointer font-cursive ${
-              isProcessing
-                ? 'bg-slate-800 text-amber-400/50 cursor-wait border border-slate-700'
-                : 'bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-500 text-slate-950 hover:brightness-110 shadow-lg shadow-amber-500/25'
-            }`}
+            disabled={isProcessing}
+            className="w-full py-3.5 bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-500 hover:brightness-110 active:scale-[0.99] text-slate-950 font-black rounded-xl text-base tracking-wide flex items-center justify-center gap-2 shadow-lg shadow-amber-500/25 transition-all disabled:opacity-50 cursor-pointer"
           >
-            <Gift className="w-4 h-4 text-slate-950" />
+            <Gift className="w-5 h-5 text-slate-950" />
             <span>
-              {isProcessing ? 'Processing Gift...' : `Send Gift (₦${amount.toLocaleString()})`}
+              {isProcessing ? 'Connecting Flutterwave...' : `Send ₦${(amount || 0).toLocaleString()} Gift`}
             </span>
           </button>
         </form>
       </div>
+
+      {/* Success Modal */}
+      {isSuccess && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-amber-400 rounded-2xl p-6 max-w-sm w-full text-center shadow-2xl space-y-3 animate-scaleUp font-cursive">
+            <CheckCircle2 className="w-12 h-12 text-amber-400 mx-auto animate-bounce" />
+            <h3 className="text-xl font-bold text-amber-300">
+              Gift Received!
+            </h3>
+            <p className="text-sm text-amber-400/90 font-sans">
+              ₦{successAmount.toLocaleString()} has been added to {team.name}'s balance.
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

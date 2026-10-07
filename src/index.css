@@ -2,18 +2,22 @@
 
 @layer base {
   body {
-    font-family: 'Dancing Script', 'Playball', 'Plus Jakarta Sans', cursive, sans-serif;
+    font-family: 'Caveat', 'Playball', 'Dancing Script', cursive, sans-serif;
     background-color: #020617;
     color: #fbbf24;
   }
 }
 
 .font-display {
-  font-family: 'Dancing Script', 'Playball', cursive, sans-serif;
+  font-family: 'Caveat', 'Playball', cursive, sans-serif;
 }
 
 .font-cursive {
-  font-family: 'Dancing Script', 'Playball', 'Great Vibes', cursive, sans-serif;
+  font-family: 'Caveat', 'Dancing Script', cursive, sans-serif;
+}
+
+.font-caveat {
+  font-family: 'Caveat', cursive, sans-serif;
 }
 
 .text-gold-gradient {
