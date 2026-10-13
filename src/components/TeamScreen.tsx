@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ArrowLeft, CheckCircle2, Gift, Sparkles } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, Gift } from 'lucide-react';
 import { Team } from '../types/game';
 import { TeamLogo } from './TeamLogo';
-import { TEAM_GEM_THEMES } from './LeaderboardView';
 import { soundManager } from '../utils/audio';
 import { triggerConfetti } from '../utils/confetti';
 import { initiateFlutterwavePayment } from '../utils/flutterwave';
@@ -24,8 +23,6 @@ export const TeamScreen: React.FC<TeamScreenProps> = ({
   const [isSuccess, setIsSuccess] = useState<boolean>(false);
   const [successAmount, setSuccessAmount] = useState<number>(0);
   const [errorMessage, setErrorMessage] = useState<string>('');
-
-  const theme = TEAM_GEM_THEMES[team.id] || TEAM_GEM_THEMES.arsenal;
 
   // Touch swipe-right tracking to navigate back
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
@@ -109,7 +106,7 @@ export const TeamScreen: React.FC<TeamScreenProps> = ({
       teamName: team.name,
       customerEmail: 'fan@fanbrawl.com',
       customerName: 'Fan Supporter',
-      onSuccess: () => {
+      onSuccess: (response) => {
         setIsProcessing(false);
         setIsSuccess(true);
         setSuccessAmount(amount);
@@ -131,125 +128,129 @@ export const TeamScreen: React.FC<TeamScreenProps> = ({
   };
 
   return (
-    <div className="w-full max-w-3xl mr-auto ml-0 space-y-4 animate-fadeIn pb-10 font-cursive text-white touch-pan-y text-sm sm:text-base leading-snug">
-      {/* Gemified Diamond Back button */}
+    <div className="w-full max-w-3xl mr-auto ml-0 space-y-4 animate-fadeIn pb-10 font-cursive text-amber-300 touch-pan-y text-sm sm:text-base leading-snug">
+      {/* Back button with subtle swipe-right indicator */}
       <div className="flex items-center justify-between">
         <button
           onClick={onBack}
-          className="px-4 py-1.5 text-white border-2 border-white/60 hover:border-white bg-gradient-to-b from-white/20 via-white/5 to-transparent rounded-xl text-xs sm:text-sm font-black flex items-center gap-2 transition-all cursor-pointer uppercase shadow-[0_0_15px_rgba(255,255,255,0.4)] hover:shadow-[0_0_25px_rgba(255,255,255,0.7)] backdrop-blur-md"
+          className="px-4 py-2 bg-slate-900 hover:bg-slate-850 text-amber-300 hover:text-amber-200 border border-amber-500/40 hover:border-amber-400 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-md uppercase"
         >
-          <ArrowLeft className="w-4 h-4 text-white" />
+          <ArrowLeft className="w-3.5 h-3.5 text-amber-400" />
           <span>Back to Battle</span>
-          <Sparkles className="w-3.5 h-3.5 text-cyan-200" />
         </button>
       </div>
 
-      {/* Gemified Team Hero Area */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 py-2 border-b-2 border-white/20">
-        <div className="flex items-center gap-3 sm:gap-4">
-          <TeamLogo team={team} size="lg" />
-          <div>
-            <div className="flex items-center gap-2.5">
-              <h1 className="text-3xl sm:text-4xl md:text-5xl font-black tracking-wide uppercase text-transparent bg-clip-text bg-gradient-to-r from-white via-cyan-100 to-white drop-shadow-[0_0_20px_rgba(255,255,255,0.95)]">
-                {team.name}
-              </h1>
-              <span className={`text-sm font-black px-2.5 py-0.5 rounded-xl border border-white/70 bg-gradient-to-b from-white/30 via-white/10 to-transparent shadow-[0_0_15px_rgba(255,255,255,0.4)] backdrop-blur-md text-white uppercase ${theme.tagGlow}`}>
-                {team.tag}
-              </span>
+      {/* Main Team Hero Banner in Compact Gold Cursive */}
+      <div className="bg-slate-900/95 border border-amber-500/40 rounded-2xl p-4 sm:p-6 shadow-xl relative overflow-hidden">
+        <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3 sm:gap-4">
+            <TeamLogo team={team} size="lg" />
+            <div>
+              <div className="flex items-center gap-2.5">
+                <h1 className="text-2xl sm:text-3xl md:text-4xl font-black text-amber-400 tracking-wide drop-shadow uppercase">
+                  {team.name}
+                </h1>
+                <span className="text-xs font-bold bg-amber-400 text-slate-950 px-2 py-0.5 rounded shadow-sm uppercase">
+                  {team.tag}
+                </span>
+              </div>
+
+              <div className="flex items-center gap-2 text-xs sm:text-sm text-amber-400/90 mt-1.5 font-cursive">
+                <span className="font-medium">{team.fanCount.toLocaleString()} Total Gifts</span>
+              </div>
             </div>
-
-            <div className="flex items-center gap-2 text-xs sm:text-sm text-cyan-100 font-bold mt-1 font-cursive drop-shadow-[0_0_8px_rgba(255,255,255,0.8)]">
-              <span>{team.fanCount.toLocaleString()} Total Gifts</span>
-            </div>
           </div>
-        </div>
 
-        {/* Total Balance in pure sparkling diamond letters */}
-        <div className="text-left sm:text-right">
-          <span className="text-xs font-black text-cyan-100 uppercase tracking-wider block font-cursive drop-shadow-sm">
-            Total Balance
-          </span>
-          <div className="text-3xl sm:text-4xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white via-cyan-100 to-white drop-shadow-[0_0_20px_rgba(255,255,255,1)] tabular-nums font-cursive">
-            ₦{team.totalBalance.toLocaleString()}
-          </div>
-        </div>
-      </div>
-
-      {/* Gemified Gift Console */}
-      <form onSubmit={handlePay} className="space-y-4 pt-2">
-        {/* Gift Amount Selection Presets */}
-        <div>
-          <label className="text-xs sm:text-sm font-black text-white uppercase tracking-wide block mb-2 font-cursive drop-shadow-[0_0_8px_rgba(255,255,255,0.8)]">
-            Gift Amount (₦)
-          </label>
-
-          <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
-            {presetAmounts.map((val) => (
-              <button
-                key={val}
-                type="button"
-                onClick={() => handleSelectPreset(val)}
-                className={`py-2 px-2 text-center rounded-xl text-xs sm:text-sm font-black border-2 transition-all cursor-pointer backdrop-blur-md ${
-                  amount === val && customAmount === val.toString()
-                    ? 'border-white bg-gradient-to-b from-white via-cyan-100 to-slate-200 text-slate-950 shadow-[0_0_25px_rgba(255,255,255,1)] scale-[1.04]'
-                    : 'border-white/30 text-white bg-white/10 hover:border-white/70 hover:bg-white/20 shadow-[0_0_12px_rgba(255,255,255,0.25)]'
-                }`}
-              >
-                ₦{val.toLocaleString()}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Custom Amount Input in Diamond Glass */}
-        <div>
-          <label className="block text-xs font-black text-white uppercase tracking-wide mb-1 drop-shadow-[0_0_8px_rgba(255,255,255,0.8)]">
-            Or Custom Gift (₦)
-          </label>
-          <div className="relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-black text-cyan-200">
-              ₦
+          {/* Prominent Team Total Balance Display in Naira */}
+          <div className="bg-slate-950 border border-amber-500/40 rounded-xl p-3.5 sm:p-4 min-w-[200px] text-right w-full sm:w-auto shadow-inner">
+            <span className="text-xs font-bold text-amber-400/90 uppercase tracking-wider block font-cursive">
+              Total Balance
             </span>
-            <input
-              type="text"
-              value={customAmount}
-              onChange={handleCustomChange}
-              placeholder="Enter amount"
-              className="w-full bg-white/10 border-2 border-white/40 focus:border-white focus:ring-2 focus:ring-white/50 focus:shadow-[0_0_20px_rgba(255,255,255,0.7)] rounded-xl pl-8 pr-3 py-2 text-sm font-black text-white placeholder-cyan-100/60 outline-none backdrop-blur-md shadow-inner transition-all"
-            />
+            <div className="text-2xl sm:text-3xl font-black text-amber-300 tabular-nums mt-0.5 drop-shadow font-cursive">
+              ₦{team.totalBalance.toLocaleString()}
+            </div>
           </div>
         </div>
+      </div>
 
-        {errorMessage && (
-          <div className="p-2.5 rounded-xl border border-red-400 text-red-200 font-bold text-xs bg-red-950/70 backdrop-blur-md shadow-[0_0_15px_rgba(239,68,68,0.5)]">
-            {errorMessage}
+      {/* Gift Console */}
+      <div className="bg-slate-900/95 border border-amber-500/40 rounded-2xl p-4 sm:p-6 shadow-xl">
+        <form onSubmit={handlePay} className="space-y-4">
+          {/* Gift Amount Selection Presets in Naira */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <label className="text-xs sm:text-sm font-bold text-amber-400 uppercase tracking-wide font-cursive">
+                Gift Amount (₦)
+              </label>
+            </div>
+
+            <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+              {presetAmounts.map((val) => (
+                <button
+                  key={val}
+                  type="button"
+                  onClick={() => handleSelectPreset(val)}
+                  className={`py-2 px-2 text-center rounded-xl text-xs sm:text-sm font-bold border transition-all cursor-pointer ${
+                    amount === val && customAmount === val.toString()
+                      ? 'bg-amber-400 text-slate-950 font-black border-amber-300 shadow-md scale-[1.02]'
+                      : 'bg-slate-950 text-amber-300 border-amber-500/30 hover:border-amber-400'
+                  }`}
+                >
+                  ₦{val.toLocaleString()}
+                </button>
+              ))}
+            </div>
           </div>
-        )}
 
-        {/* Gemified Action Button */}
-        <button
-          type="submit"
-          disabled={isProcessing}
-          className="w-full py-3.5 rounded-xl border-2 border-white bg-gradient-to-b from-white via-cyan-100 to-slate-200 text-slate-950 font-black text-base tracking-wide flex items-center justify-center gap-2 shadow-[0_0_30px_rgba(255,255,255,0.95)] hover:shadow-[0_0_45px_rgba(255,255,255,1)] hover:scale-[1.01] active:scale-[0.99] transition-all disabled:opacity-50 cursor-pointer"
-        >
-          <Gift className="w-5 h-5 text-slate-950" />
-          <span>
-            {isProcessing ? 'Connecting Flutterwave...' : `Send ₦${(amount || 0).toLocaleString()} Gift`}
-          </span>
-          <Sparkles className="w-4 h-4 text-slate-950 animate-pulse" />
-        </button>
-      </form>
+          {/* Custom Amount Input in Naira */}
+          <div>
+            <label className="block text-xs font-bold text-amber-400/90 uppercase tracking-wide mb-1">
+              Or Custom Gift (₦)
+            </label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-bold text-amber-400">
+                ₦
+              </span>
+              <input
+                type="text"
+                value={customAmount}
+                onChange={handleCustomChange}
+                placeholder="Enter amount"
+                className="w-full bg-slate-950 border border-amber-500/40 focus:border-amber-400 focus:ring-1 focus:ring-amber-400 rounded-xl pl-8 pr-3 py-2 text-sm font-cursive text-amber-300 placeholder-amber-500/40 outline-none transition-all"
+              />
+            </div>
+          </div>
 
-      {/* Gemified Success Modal */}
+          {errorMessage && (
+            <div className="p-2.5 rounded-xl bg-red-950/80 border border-red-500/40 text-red-300 text-xs">
+              {errorMessage}
+            </div>
+          )}
+
+          {/* Action Button */}
+          <button
+            type="submit"
+            disabled={isProcessing}
+            className="w-full py-3.5 bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-500 hover:brightness-110 active:scale-[0.99] text-slate-950 font-black rounded-xl text-base tracking-wide flex items-center justify-center gap-2 shadow-lg shadow-amber-500/25 transition-all disabled:opacity-50 cursor-pointer"
+          >
+            <Gift className="w-5 h-5 text-slate-950" />
+            <span>
+              {isProcessing ? 'Connecting Flutterwave...' : `Send ₦${(amount || 0).toLocaleString()} Gift`}
+            </span>
+          </button>
+        </form>
+      </div>
+
+      {/* Success Modal */}
       {isSuccess && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="bg-slate-950/95 border-2 border-white rounded-2xl p-6 max-w-sm w-full text-center shadow-[0_0_40px_rgba(255,255,255,0.8)] space-y-3 animate-scaleUp font-cursive">
-            <CheckCircle2 className="w-12 h-12 text-cyan-200 mx-auto animate-bounce drop-shadow-[0_0_15px_rgba(255,255,255,0.9)]" />
-            <h3 className="text-xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white via-cyan-100 to-white drop-shadow-sm">
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-amber-400 rounded-2xl p-6 max-w-sm w-full text-center shadow-2xl space-y-3 animate-scaleUp font-cursive">
+            <CheckCircle2 className="w-12 h-12 text-amber-400 mx-auto animate-bounce" />
+            <h3 className="text-xl font-bold text-amber-300">
               Gift Received!
             </h3>
-            <p className="text-sm font-bold text-white">
-              Thank you for contributing <span className="font-black text-cyan-200">₦{successAmount.toLocaleString()}</span> to {team.name}!
+            <p className="text-sm text-amber-400/90 font-sans">
+              ₦{successAmount.toLocaleString()} has been added to {team.name}'s balance.
             </p>
           </div>
         </div>

@@ -115,17 +115,8 @@ export default function App() {
   const currentSelectedTeam = teams.find((t) => t.id === selectedTeamId);
 
   return (
-    <div className="min-h-screen relative text-slate-100 selection:bg-amber-500 selection:text-slate-950 p-3 sm:p-5 flex flex-col items-start justify-start overflow-x-hidden">
-      {/* Gigantic White Diamonds Gemfield Background */}
-      <div
-        className="fixed inset-0 w-full h-full bg-cover bg-center bg-no-repeat -z-10 pointer-events-none"
-        style={{
-          backgroundImage: "url('/src/assets/images/white_diamonds_bg_1791929652097.jpg')",
-          backgroundAttachment: 'fixed',
-        }}
-      />
-
-      <main className="w-full max-w-4xl mr-auto ml-0 relative z-10">
+    <div className="min-h-screen bg-slate-950 text-slate-100 selection:bg-amber-500 selection:text-slate-950 p-3 sm:p-5 flex flex-col items-start justify-start">
+      <main className="w-full max-w-4xl mr-auto ml-0">
         {!selectedTeamId ? (
           /* Leaderboard of Four Teams: Arsenal, Man City, Man Utd, Chelsea */
           <LeaderboardView
