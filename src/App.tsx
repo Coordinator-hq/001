@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { VersusView } from './components/VersusView';
+import { LeaderboardView } from './components/LeaderboardView';
 import { TeamScreen } from './components/TeamScreen';
 import { 
   Team, 
@@ -15,21 +15,21 @@ import {
 } from './data/initialLeagueData';
 
 const STORAGE_KEYS = {
-  TEAMS: 'apex_teams_v6',
-  EVENTS: 'apex_events_v6'
+  TEAMS: 'fanbrawl_teams_v8',
+  EVENTS: 'fanbrawl_events_v8'
 };
 
 export default function App() {
   // Navigation State
   const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
 
-  // Teams State
+  // Teams State (Arsenal, Man City, Man Utd, Chelsea)
   const [teams, setTeams] = useState<Team[]>(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.TEAMS);
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length === 4 && parsed.some(t => t.id === 'wizkid')) {
+        if (Array.isArray(parsed) && parsed.length === 4 && parsed.some(t => t.id === 'arsenal')) {
           return parsed;
         }
       } catch (e) {
@@ -128,16 +128,14 @@ export default function App() {
     setLiveEvents((prev) => [newEvt, ...prev.slice(0, 39)]);
   };
 
-  const sortedTeams = [...teams].sort((a, b) => b.totalBalance - a.totalBalance);
   const currentSelectedTeam = teams.find((t) => t.id === selectedTeamId);
-  const currentTeamRank = currentSelectedTeam ? sortedTeams.findIndex((t) => t.id === currentSelectedTeam.id) + 1 : 1;
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-amber-500 selection:text-slate-950 p-4 md:p-8">
       <main className="max-w-4xl mx-auto">
         {!selectedTeamId ? (
-          /* Head-to-Head Versus Main View with 10-Min auto-resetting timers */
-          <VersusView
+          /* Leaderboard of Four Teams: Arsenal, Man City, Man Utd, Chelsea */
+          <LeaderboardView
             teams={teams}
             onSelectTeam={(team) => {
               setSelectedTeamId(team.id);
