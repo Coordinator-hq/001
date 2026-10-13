@@ -16,45 +16,38 @@ export const TeamLogo: React.FC<TeamLogoProps> = ({
   const [hasError, setHasError] = useState(false);
 
   const sizeClasses = {
-    sm: 'w-7 h-7',
-    md: 'w-10 h-10 sm:w-11 sm:h-11',
-    lg: 'w-14 h-14 sm:w-16 sm:h-16'
+    sm: 'w-8 h-8',
+    md: 'w-11 h-11 sm:w-12 sm:h-12',
+    lg: 'w-16 h-16 sm:w-20 sm:h-20'
   };
 
   const currentSizeClass = sizeClasses[size];
 
   if (team.logoUrl && !hasError) {
     return (
-      <div
-        className={`${currentSizeClass} shrink-0 rounded-xl bg-slate-950/80 p-1 flex items-center justify-center border border-amber-500/30 shadow-md ${className}`}
-      >
+      <div className={`${currentSizeClass} shrink-0 flex items-center justify-center ${className}`}>
         <img
           src={team.logoUrl}
           alt={`${team.name} Logo`}
           referrerPolicy="no-referrer"
           onError={() => setHasError(true)}
-          className="w-full h-full object-contain filter drop-shadow"
+          className="w-full h-full object-contain filter drop-shadow-[0_2px_10px_rgba(0,0,0,0.85)] hover:scale-105 transition-transform"
           loading="lazy"
         />
       </div>
     );
   }
 
-  // Graceful fallback shield with team colors & tag
+  // Graceful fallback with clean icon and no box
   return (
     <div
-      className={`${currentSizeClass} shrink-0 rounded-xl bg-slate-950 flex flex-col items-center justify-center border border-amber-500/40 shadow-md relative overflow-hidden ${className}`}
-      style={{
-        borderColor: team.primaryColor || '#F59E0B'
-      }}
+      className={`${currentSizeClass} shrink-0 flex flex-col items-center justify-center relative ${className}`}
     >
       <Shield
-        className="w-full h-full p-1 opacity-25 absolute inset-0"
-        style={{ color: team.primaryColor || '#F59E0B' }}
+        className="w-full h-full p-1 opacity-90 drop-shadow-[0_0_8px_rgba(255,255,255,0.5)]"
+        style={{ color: team.primaryColor || '#FFFFFF' }}
       />
-      <span
-        className="font-black text-[10px] sm:text-xs relative z-10 text-amber-300 tracking-tighter"
-      >
+      <span className="font-black text-[10px] sm:text-xs absolute z-10 text-white drop-shadow-[0_0_6px_rgba(0,0,0,0.9)] tracking-tighter">
         {team.tag}
       </span>
     </div>

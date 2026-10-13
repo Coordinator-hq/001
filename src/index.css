@@ -3,8 +3,8 @@
 @layer base {
   body {
     font-family: 'Fredoka', 'Comfortaa', 'Quicksand', system-ui, sans-serif;
-    background-color: #020617;
-    color: #fbbf24;
+    background-color: #ffffff;
+    color: #1e293b;
     letter-spacing: 0.02em;
   }
 }
@@ -30,15 +30,15 @@
 }
 
 .text-gold-gradient {
-  background: linear-gradient(135deg, #FFFBEB 0%, #FBBF24 50%, #D97706 100%);
+  background: linear-gradient(135deg, #B45309 0%, #D97706 50%, #92400E 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
 .gold-glow {
-  box-shadow: 0 0 25px rgba(245, 158, 11, 0.25);
+  box-shadow: 0 0 25px rgba(217, 119, 6, 0.2);
 }
 
 .gold-border {
-  border-color: rgba(245, 158, 11, 0.4);
+  border-color: rgba(217, 119, 6, 0.4);
 }

@@ -26,8 +26,8 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
       </div>
 
       {/* Pot Distribution Momentum Bar */}
-      <div className="bg-slate-900/90 border border-amber-500/40 rounded-2xl p-4 shadow-xl space-y-2">
-        <div className="flex justify-between items-center text-xs sm:text-sm font-bold text-amber-400 tracking-wider">
+      <div className="bg-slate-50 border border-amber-500/40 rounded-2xl p-4 shadow-xl space-y-2">
+        <div className="flex justify-between items-center text-xs sm:text-sm font-bold text-amber-700 tracking-wider">
           {sortedTeams.map((team) => {
             const pct = totalLeaguePot > 0 ? Math.round((team.totalBalance / totalLeaguePot) * 100) : 25;
             return (
@@ -37,20 +37,17 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
             );
           })}
         </div>
-        <div className="w-full h-3.5 bg-slate-950 rounded-full overflow-hidden flex border border-amber-500/50 p-0.5 shadow-inner">
-          {sortedTeams.map((team, idx) => {
+        <div className="w-full h-3.5 bg-slate-200 rounded-full overflow-hidden flex border border-amber-500/40 p-0.5 shadow-inner">
+          {sortedTeams.map((team) => {
             const pct = totalLeaguePot > 0 ? (team.totalBalance / totalLeaguePot) * 100 : 25;
-            const gradients = [
-              'bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-500',
-              'bg-amber-600',
-              'bg-slate-900 border-l border-amber-500/30',
-              'bg-slate-950 border-l border-amber-500/40'
-            ];
             return (
               <div
                 key={team.id}
-                className={`h-full ${gradients[idx % gradients.length]} transition-all duration-700`}
-                style={{ width: `${pct}%` }}
+                className="h-full transition-all duration-700 first:rounded-l-full last:rounded-r-full"
+                style={{
+                  width: `${pct}%`,
+                  backgroundColor: team.primaryColor || '#D97706'
+                }}
               />
             );
           })}
@@ -67,16 +64,16 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
             <div
               key={team.id}
               onClick={() => onSelectTeam(team)}
-              className={`bg-slate-900/95 border ${
+              className={`bg-slate-50 border ${
                 isTop
-                  ? 'border-amber-400 shadow-xl shadow-amber-500/20 bg-gradient-to-r from-slate-900/95 via-amber-500/5 to-slate-900/95'
-                  : 'border-amber-500/30 hover:border-amber-400/80 shadow-lg'
+                  ? 'border-amber-500 shadow-xl shadow-amber-500/10 bg-gradient-to-r from-amber-50/50 via-amber-100/30 to-amber-505/50'
+                  : 'border-slate-200 hover:border-amber-400 shadow-sm'
               } rounded-2xl p-4 sm:p-5 flex items-center justify-between gap-3 sm:gap-4 transition-all duration-200 hover:scale-[1.01] cursor-pointer group relative overflow-hidden`}
             >
               {/* Left: Team Logo & Tag */}
               <div className="flex items-center gap-3 sm:gap-4 min-w-0">
                 <TeamLogo team={team} size="md" />
-                <span className="text-sm sm:text-base font-black uppercase tracking-wider bg-slate-950 px-2.5 py-1 rounded-lg border border-amber-500/40 text-amber-400">
+                <span className="text-sm sm:text-base font-black uppercase tracking-wider bg-slate-200 px-2.5 py-1 rounded-lg border border-amber-500/40 text-slate-800">
                   {team.tag}
                 </span>
               </div>
@@ -85,7 +82,7 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
               <div className="flex items-center gap-3 sm:gap-5 shrink-0">
                 {/* Balance */}
                 <div className="text-right">
-                  <div className="text-xl sm:text-2xl md:text-3xl font-black text-amber-300 drop-shadow tabular-nums">
+                  <div className="text-xl sm:text-2xl md:text-3xl font-black text-amber-700 drop-shadow tabular-nums">
                     ₦{team.totalBalance.toLocaleString()}
                   </div>
                 </div>

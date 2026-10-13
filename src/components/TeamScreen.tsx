@@ -141,32 +141,32 @@ export const TeamScreen: React.FC<TeamScreenProps> = ({
       </div>
 
       {/* Main Team Hero Banner in Compact Gold Cursive */}
-      <div className="bg-slate-900/95 border border-amber-500/40 rounded-2xl p-4 sm:p-6 shadow-xl relative overflow-hidden">
+      <div className="bg-slate-50 border border-amber-500/40 rounded-2xl p-4 sm:p-6 shadow-xl relative overflow-hidden">
         <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3 sm:gap-4">
             <TeamLogo team={team} size="lg" />
             <div>
               <div className="flex items-center gap-2.5">
-                <h1 className="text-2xl sm:text-3xl md:text-4xl font-black text-amber-400 tracking-wide drop-shadow uppercase">
+                <h1 className="text-2xl sm:text-3xl md:text-4xl font-black text-amber-700 tracking-wide drop-shadow uppercase">
                   {team.name}
                 </h1>
-                <span className="text-xs font-bold bg-amber-400 text-slate-950 px-2 py-0.5 rounded shadow-sm uppercase">
+                <span className="text-xs font-bold bg-amber-500 text-white px-2 py-0.5 rounded shadow-sm uppercase">
                   {team.tag}
                 </span>
               </div>
 
-              <div className="flex items-center gap-2 text-xs sm:text-sm text-amber-400/90 mt-1.5 font-cursive">
+              <div className="flex items-center gap-2 text-xs sm:text-sm text-slate-600 mt-1.5 font-cursive">
                 <span className="font-medium">{team.fanCount.toLocaleString()} Total Gifts</span>
               </div>
             </div>
           </div>
 
           {/* Prominent Team Total Balance Display in Naira */}
-          <div className="bg-slate-950 border border-amber-500/40 rounded-xl p-3.5 sm:p-4 min-w-[200px] text-right w-full sm:w-auto shadow-inner">
-            <span className="text-xs font-bold text-amber-400/90 uppercase tracking-wider block font-cursive">
+          <div className="bg-slate-100 border border-amber-500/40 rounded-xl p-3.5 sm:p-4 min-w-[200px] text-right w-full sm:w-auto shadow-inner">
+            <span className="text-xs font-bold text-slate-600 uppercase tracking-wider block font-cursive">
               Total Balance
             </span>
-            <div className="text-2xl sm:text-3xl font-black text-amber-300 tabular-nums mt-0.5 drop-shadow font-cursive">
+            <div className="text-2xl sm:text-3xl font-black text-amber-700 tabular-nums mt-0.5 drop-shadow font-cursive">
               ₦{team.totalBalance.toLocaleString()}
             </div>
           </div>

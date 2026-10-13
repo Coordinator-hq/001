@@ -115,7 +115,7 @@ export default function App() {
   const currentSelectedTeam = teams.find((t) => t.id === selectedTeamId);
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 selection:bg-amber-500 selection:text-slate-950 p-3 sm:p-5 flex flex-col items-start justify-start">
+    <div className="min-h-screen bg-white text-slate-900 selection:bg-amber-500 selection:text-white p-3 sm:p-5 flex flex-col items-start justify-start">
       <main className="w-full max-w-4xl mr-auto ml-0">
         {!selectedTeamId ? (
           /* Leaderboard of Four Teams: Arsenal, Man City, Man Utd, Chelsea */
