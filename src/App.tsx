@@ -38,6 +38,9 @@ export default function App() {
             const initial = INITIAL_TEAMS.find((it) => it.id === savedTeam.id);
             return {
               ...savedTeam,
+              primaryColor: initial?.primaryColor || (savedTeam.id === 'diamond_king' ? '#EF4444' : '#3B82F6'),
+              accentColor: initial?.accentColor || (savedTeam.id === 'diamond_king' ? '#F87171' : '#60A5FA'),
+              bgGradient: initial?.bgGradient || (savedTeam.id === 'diamond_king' ? 'from-red-500/20 via-rose-500/10 to-transparent' : 'from-blue-500/25 via-indigo-500/10 to-transparent'),
               logoUrl: initial?.logoUrl || (savedTeam.id === 'diamond_king' ? '/images/diamond_king.jpg' : '/images/babs_cardini.jpg')
             };
           });
@@ -114,7 +117,7 @@ export default function App() {
   const currentSelectedTeam = teams.find((t) => t.id === selectedTeamId);
 
   return (
-    <div className="min-h-screen bg-[#06070c] text-white selection:bg-[#a855f7] selection:text-white p-3 sm:p-6 flex flex-col items-center justify-center">
+    <div className="min-h-screen bg-[#06070c] text-white selection:bg-red-500 selection:text-white p-3 sm:p-6 flex flex-col items-center justify-center">
       <main className="w-full flex justify-center">
         <PvPBattleDashboard
           teams={teams}

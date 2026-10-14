@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Gift, CheckCircle2, Timer } from 'lucide-react';
 import { Team } from '../types/game';
 import { soundManager } from '../utils/audio';
@@ -27,8 +27,43 @@ export const PvPBattleDashboard: React.FC<PvPBattleDashboardProps> = ({
   const diamondKingPct = hasPot ? Math.round((diamondKing.totalBalance / totalPot) * 100) : 50;
   const babsCardiniPct = hasPot ? 100 - diamondKingPct : 50;
 
-  // 10-Minute Battle Timer (Yet to begin: 10:00)
-  const timerDisplay = '10:00';
+  // 10-Minute Battle Countdown Timer (Active & ticking)
+  const [timeLeft, setTimeLeft] = useState<number>(() => {
+    const STORAGE_KEY = 'fanbrawl_battle_timer_end_v1';
+    const saved = localStorage.getItem(STORAGE_KEY);
+    const now = Date.now();
+    if (saved) {
+      const target = parseInt(saved, 10);
+      if (!isNaN(target) && target > now) {
+        return Math.floor((target - now) / 1000);
+      }
+    }
+    const newEnd = now + 10 * 60 * 1000;
+    localStorage.setItem(STORAGE_KEY, newEnd.toString());
+    return 10 * 60;
+  });
+
+  useEffect(() => {
+    const STORAGE_KEY = 'fanbrawl_battle_timer_end_v1';
+    const updateTime = () => {
+      const now = Date.now();
+      let target = parseInt(localStorage.getItem(STORAGE_KEY) || '0', 10);
+      if (!target || target <= now) {
+        target = now + 10 * 60 * 1000;
+        localStorage.setItem(STORAGE_KEY, target.toString());
+      }
+      const remainingSeconds = Math.max(0, Math.floor((target - now) / 1000));
+      setTimeLeft(remainingSeconds);
+    };
+
+    updateTime();
+    const interval = setInterval(updateTime, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const minutes = Math.floor(timeLeft / 60);
+  const seconds = timeLeft % 60;
+  const timerDisplay = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
 
   // Selected magician to gift to (defaults to Diamond King)
   const [selectedTeamId, setSelectedTeamId] = useState<'diamond_king' | 'babs_cardini'>('diamond_king');
@@ -92,7 +127,7 @@ export const PvPBattleDashboard: React.FC<PvPBattleDashboardProps> = ({
     });
   };
 
-  const activeColor = selectedTeamId === 'diamond_king' ? '#00E599' : '#A855F7';
+  const activeColor = selectedTeamId === 'diamond_king' ? '#EF4444' : '#3B82F6';
 
   return (
     <div className="w-full max-w-[480px] mx-auto space-y-4 font-sans select-none animate-fadeIn pb-6">
@@ -124,13 +159,10 @@ export const PvPBattleDashboard: React.FC<PvPBattleDashboardProps> = ({
               ₦{totalPot.toLocaleString()}
             </span>
             
-            {/* 10-Minute Battle Countdown Timer (Yet to begin) */}
-            <div className="flex items-center gap-1.5 mt-1 text-[11px] font-mono text-purple-300 bg-purple-950/70 border border-purple-500/40 px-2.5 py-0.5 rounded-full shadow-[0_0_10px_rgba(168,85,247,0.25)]">
-              <Timer className="w-3 h-3 text-purple-400" />
-              <span className="text-slate-400 text-[9px] sm:text-[10px] font-sans font-semibold uppercase">
-                STARTS IN:
-              </span>
-              <span className="tabular-nums font-bold tracking-wider text-purple-200">
+            {/* 10-Minute Battle Countdown Timer */}
+            <div className="flex items-center gap-1.5 mt-1 text-[11px] font-mono text-slate-200 bg-slate-900/80 border border-slate-700/60 px-2.5 py-0.5 rounded-full shadow-md">
+              <Timer className="w-3 h-3 text-amber-400 animate-pulse" />
+              <span className="tabular-nums font-bold tracking-wider text-slate-100">
                 {timerDisplay}
               </span>
             </div>
@@ -145,27 +177,27 @@ export const PvPBattleDashboard: React.FC<PvPBattleDashboardProps> = ({
 
         {/* Dynamic Dual-Color Percentage Bar */}
         <div className="w-full h-3.5 sm:h-4 bg-[#141628] rounded-full overflow-hidden flex border border-[#232742] p-0.5 shadow-inner">
-          {/* Diamond King Left Portion (Vibrant Emerald/Neon Green) */}
+          {/* Diamond King Left Portion (Vibrant Red) */}
           <div
-            className="h-full bg-gradient-to-r from-[#00E599] via-[#00f5a0] to-[#00E599] rounded-l-full transition-all duration-700 shadow-[0_0_12px_rgba(0,229,153,0.5)]"
+            className="h-full bg-gradient-to-r from-[#DC2626] via-[#EF4444] to-[#F87171] rounded-l-full transition-all duration-700 shadow-[0_0_12px_rgba(239,68,68,0.5)]"
             style={{ width: `${diamondKingPct}%` }}
           />
-          {/* Babs Cardini Right Portion (Vibrant Violet/Purple) */}
+          {/* Babs Cardini Right Portion (Vibrant Blue) */}
           <div
-            className="h-full bg-gradient-to-r from-[#8B5CF6] via-[#A855F7] to-[#8B5CF6] rounded-r-full transition-all duration-700 shadow-[0_0_12px_rgba(168,85,247,0.5)]"
+            className="h-full bg-gradient-to-r from-[#1D4ED8] via-[#3B82F6] to-[#60A5FA] rounded-r-full transition-all duration-700 shadow-[0_0_12px_rgba(59,130,246,0.5)]"
             style={{ width: `${babsCardiniPct}%` }}
           />
         </div>
 
         {/* Dynamic Live Balance Sub-bar */}
         <div className="flex justify-between items-center text-[11px] font-bold text-slate-400 mt-2 px-1">
-          <span className="text-[#00E599] tabular-nums">
+          <span className="text-[#EF4444] tabular-nums">
             ₦{diamondKing.totalBalance.toLocaleString()}
           </span>
           <span className="text-slate-500 text-[10px] uppercase tracking-wider font-semibold">
-            Tap magician to back
+            Tap magician to gift
           </span>
-          <span className="text-[#A855F7] tabular-nums">
+          <span className="text-[#3B82F6] tabular-nums">
             ₦{babsCardini.totalBalance.toLocaleString()}
           </span>
         </div>
@@ -180,8 +212,8 @@ export const PvPBattleDashboard: React.FC<PvPBattleDashboardProps> = ({
             aria-label="Select Diamond King"
             className={`relative aspect-square sm:aspect-[4/4.5] rounded-2xl overflow-hidden cursor-pointer transition-all duration-200 group text-left border ${
               selectedTeamId === 'diamond_king'
-                ? 'border-2 border-[#00E599] shadow-[0_0_22px_rgba(0,229,153,0.35)] scale-[1.01]'
-                : 'border-[#1e2238] hover:border-[#00E599]/60 opacity-90 hover:opacity-100'
+                ? 'border-2 border-[#EF4444] shadow-[0_0_22px_rgba(239,68,68,0.4)] scale-[1.01]'
+                : 'border-[#1e2238] hover:border-[#EF4444]/60 opacity-90 hover:opacity-100'
             }`}
           >
             <img
@@ -203,20 +235,20 @@ export const PvPBattleDashboard: React.FC<PvPBattleDashboardProps> = ({
               <span className="text-base sm:text-lg font-black text-white tracking-wide drop-shadow-md block leading-tight">
                 Diamond King
               </span>
-              <span className="text-[10px] text-emerald-400 font-bold uppercase tracking-wider block">
+              <span className="text-[10px] text-red-400 font-bold uppercase tracking-wider block">
                 Magician
               </span>
             </div>
 
             {/* Active Glow Indicator */}
             {selectedTeamId === 'diamond_king' && (
-              <div className="absolute top-2 left-2 w-2 h-2 rounded-full bg-[#00E599] shadow-[0_0_8px_#00E599]" />
+              <div className="absolute top-2 left-2 w-2 h-2 rounded-full bg-[#EF4444] shadow-[0_0_8px_#EF4444]" />
             )}
           </button>
 
           {/* Center Stylized "Vs" Badge Overlay */}
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-20 pointer-events-none flex items-center justify-center">
-            <span className="text-2xl sm:text-3xl font-black italic text-indigo-100 drop-shadow-[0_0_14px_rgba(168,85,247,0.95)]">
+            <span className="text-2xl sm:text-3xl font-black italic text-white drop-shadow-[0_0_14px_rgba(255,255,255,0.7)]">
               Vs
             </span>
           </div>
@@ -228,8 +260,8 @@ export const PvPBattleDashboard: React.FC<PvPBattleDashboardProps> = ({
             aria-label="Select Babs Cardini"
             className={`relative aspect-square sm:aspect-[4/4.5] rounded-2xl overflow-hidden cursor-pointer transition-all duration-200 group text-left border ${
               selectedTeamId === 'babs_cardini'
-                ? 'border-2 border-[#A855F7] shadow-[0_0_22px_rgba(168,85,247,0.35)] scale-[1.01]'
-                : 'border-[#1e2238] hover:border-[#A855F7]/60 opacity-90 hover:opacity-100'
+                ? 'border-2 border-[#3B82F6] shadow-[0_0_22px_rgba(59,130,246,0.4)] scale-[1.01]'
+                : 'border-[#1e2238] hover:border-[#3B82F6]/60 opacity-90 hover:opacity-100'
             }`}
           >
             <img
@@ -251,14 +283,14 @@ export const PvPBattleDashboard: React.FC<PvPBattleDashboardProps> = ({
               <span className="text-base sm:text-lg font-black text-white tracking-wide drop-shadow-md block leading-tight">
                 Babs Cardini
               </span>
-              <span className="text-[10px] text-purple-400 font-bold uppercase tracking-wider block">
+              <span className="text-[10px] text-blue-400 font-bold uppercase tracking-wider block">
                 Magician
               </span>
             </div>
 
             {/* Active Glow Indicator */}
             {selectedTeamId === 'babs_cardini' && (
-              <div className="absolute top-2 right-2 w-2 h-2 rounded-full bg-[#A855F7] shadow-[0_0_8px_#A855F7]" />
+              <div className="absolute top-2 right-2 w-2 h-2 rounded-full bg-[#3B82F6] shadow-[0_0_8px_#3B82F6]" />
             )}
           </button>
 
@@ -271,7 +303,7 @@ export const PvPBattleDashboard: React.FC<PvPBattleDashboardProps> = ({
         {/* Title */}
         <div className="flex items-center justify-between">
           <h2 className="text-lg sm:text-xl font-bold tracking-tight text-white">
-            Choose <span className="text-[#c084fc]">Amount</span>
+            Choose <span className="text-slate-300">Amount</span>
           </h2>
 
           {/* Active target badge */}
@@ -280,7 +312,7 @@ export const PvPBattleDashboard: React.FC<PvPBattleDashboardProps> = ({
               className="w-2 h-2 rounded-full inline-block"
               style={{ backgroundColor: activeColor }}
             />
-            <span className="text-slate-300">Backing:</span>
+            <span className="text-slate-300">Gifting:</span>
             <span className="font-bold text-white">{activeTeam.name}</span>
           </div>
         </div>
@@ -290,10 +322,10 @@ export const PvPBattleDashboard: React.FC<PvPBattleDashboardProps> = ({
           {presetAmounts.map((val) => {
             const isSelected = selectedAmount === val && customAmount === '';
 
-            // Selected button border/glow matches the active magician's color (emerald or purple)
+            // Selected button border/glow matches the active magician's color (red or blue)
             const activeStyle = selectedTeamId === 'diamond_king'
-              ? 'border-2 border-[#00E599] text-white bg-[#00E599]/15 shadow-[0_0_16px_rgba(0,229,153,0.3)]'
-              : 'border-2 border-[#A855F7] text-white bg-[#A855F7]/15 shadow-[0_0_16px_rgba(168,85,247,0.3)]';
+              ? 'border-2 border-[#EF4444] text-white bg-[#EF4444]/15 shadow-[0_0_16px_rgba(239,68,68,0.3)]'
+              : 'border-2 border-[#3B82F6] text-white bg-[#3B82F6]/15 shadow-[0_0_16px_rgba(59,130,246,0.3)]';
 
             return (
               <button
@@ -316,7 +348,12 @@ export const PvPBattleDashboard: React.FC<PvPBattleDashboardProps> = ({
         <div className="flex items-center gap-2.5 sm:gap-3">
           
           {/* Custom Amount Input with Double-Stroked Naira Symbol */}
-          <div className="flex-1 relative flex items-center bg-[#121424] border border-[#232742] focus-within:border-[#A855F7] rounded-xl px-3.5 sm:px-4 py-3 sm:py-3.5 transition-all">
+          <div
+            className="flex-1 relative flex items-center bg-[#121424] border border-[#232742] rounded-xl px-3.5 sm:px-4 py-3 sm:py-3.5 transition-all"
+            style={{
+              borderColor: customAmount ? activeColor : undefined
+            }}
+          >
             <span className="text-slate-400 font-black text-base sm:text-lg select-none">
               ₦
             </span>
@@ -335,9 +372,17 @@ export const PvPBattleDashboard: React.FC<PvPBattleDashboardProps> = ({
             disabled={isProcessing}
             onClick={handlePay}
             aria-label={`Gift ₦${selectedAmount.toLocaleString()} to ${activeTeam.name}`}
-            className="w-13 h-13 sm:w-14 sm:h-14 rounded-xl border border-[#A855F7]/70 bg-gradient-to-br from-[#7e22ce]/30 to-[#a855f7]/25 hover:from-[#7e22ce]/50 hover:to-[#a855f7]/40 shadow-[0_0_20px_rgba(168,85,247,0.35)] flex items-center justify-center shrink-0 cursor-pointer active:scale-95 transition-all disabled:opacity-50"
+            className={`w-13 h-13 sm:w-14 sm:h-14 rounded-xl border flex items-center justify-center shrink-0 cursor-pointer active:scale-95 transition-all disabled:opacity-50 ${
+              selectedTeamId === 'diamond_king'
+                ? 'border-red-500/70 bg-gradient-to-br from-red-700/30 to-red-500/25 hover:from-red-700/50 hover:to-red-500/40 shadow-[0_0_20px_rgba(239,68,68,0.35)]'
+                : 'border-blue-500/70 bg-gradient-to-br from-blue-700/30 to-blue-500/25 hover:from-blue-700/50 hover:to-blue-500/40 shadow-[0_0_20px_rgba(59,130,246,0.35)]'
+            }`}
           >
-            <Gift className="w-5 h-5 sm:w-6 sm:h-6 text-[#c084fc]" />
+            <Gift
+              className={`w-5 h-5 sm:w-6 sm:h-6 ${
+                selectedTeamId === 'diamond_king' ? 'text-red-400' : 'text-blue-400'
+              }`}
+            />
           </button>
         </div>
 
