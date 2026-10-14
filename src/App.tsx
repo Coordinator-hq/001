@@ -14,8 +14,8 @@ import {
 } from './data/initialLeagueData';
 
 const STORAGE_KEYS = {
-  TEAMS: 'fanbrawl_magicians_v5',
-  EVENTS: 'fanbrawl_events_magicians_v3'
+  TEAMS: 'fanbrawl_magicians_zero_pot_v1',
+  EVENTS: 'fanbrawl_events_magicians_zero_v1'
 };
 
 export default function App() {

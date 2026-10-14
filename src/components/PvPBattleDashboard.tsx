@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Gift, CheckCircle2 } from 'lucide-react';
+import { Gift, CheckCircle2, Timer } from 'lucide-react';
 import { Team } from '../types/game';
 import { soundManager } from '../utils/audio';
 import { triggerConfetti } from '../utils/confetti';
@@ -22,9 +22,13 @@ export const PvPBattleDashboard: React.FC<PvPBattleDashboardProps> = ({
 
   const totalPot = (diamondKing?.totalBalance || 0) + (babsCardini?.totalBalance || 0);
 
-  // Dynamic percentage calculation
-  const diamondKingPct = totalPot > 0 ? Math.round((diamondKing.totalBalance / totalPot) * 100) : 58;
-  const babsCardiniPct = 100 - diamondKingPct;
+  // Dynamic percentage calculation (defaults to 50/50 when pot is zero)
+  const hasPot = totalPot > 0;
+  const diamondKingPct = hasPot ? Math.round((diamondKing.totalBalance / totalPot) * 100) : 50;
+  const babsCardiniPct = hasPot ? 100 - diamondKingPct : 50;
+
+  // 10-Minute Battle Timer (Yet to begin: 10:00)
+  const timerDisplay = '10:00';
 
   // Selected magician to gift to (defaults to Diamond King)
   const [selectedTeamId, setSelectedTeamId] = useState<'diamond_king' | 'babs_cardini'>('diamond_king');
@@ -101,25 +105,42 @@ export const PvPBattleDashboard: React.FC<PvPBattleDashboardProps> = ({
         </div>
       )}
 
-      {/* CARD 1: Percentage Bar, Pot Balance & Horizontal Diamond King vs Babs Cardini */}
+      {/* CARD 1: Percentage Bar, Pot Balance, Live Timer & Horizontal Diamond King vs Babs Cardini */}
       <div className="bg-[#0b0c16] border border-[#1e2238] rounded-[28px] p-4 sm:p-5 shadow-2xl relative overflow-hidden">
         
-        {/* Top: Percentages & Total Pot */}
-        <div className="flex justify-between items-baseline px-1 mb-2">
-          <span className="text-2xl sm:text-3xl font-black text-white tracking-tight">
-            {diamondKingPct}%
-          </span>
-          <div className="text-center">
+        {/* Top: Percentages, Pot Balance & Live Timer */}
+        <div className="flex justify-between items-center px-1 mb-2.5">
+          <div className="flex flex-col items-start">
+            <span className="text-2xl sm:text-3xl font-black text-white tracking-tight">
+              {diamondKingPct}%
+            </span>
+          </div>
+
+          <div className="text-center flex flex-col items-center">
             <span className="text-[10px] sm:text-xs font-semibold text-slate-400 tracking-wider uppercase block">
               POT BALANCE
             </span>
-            <span className="text-xs sm:text-sm font-black text-amber-400 tabular-nums">
+            <span className="text-base sm:text-lg font-black text-amber-400 tabular-nums">
               ₦{totalPot.toLocaleString()}
             </span>
+            
+            {/* 10-Minute Battle Countdown Timer (Yet to begin) */}
+            <div className="flex items-center gap-1.5 mt-1 text-[11px] font-mono text-purple-300 bg-purple-950/70 border border-purple-500/40 px-2.5 py-0.5 rounded-full shadow-[0_0_10px_rgba(168,85,247,0.25)]">
+              <Timer className="w-3 h-3 text-purple-400" />
+              <span className="text-slate-400 text-[9px] sm:text-[10px] font-sans font-semibold uppercase">
+                STARTS IN:
+              </span>
+              <span className="tabular-nums font-bold tracking-wider text-purple-200">
+                {timerDisplay}
+              </span>
+            </div>
           </div>
-          <span className="text-2xl sm:text-3xl font-black text-white tracking-tight">
-            {babsCardiniPct}%
-          </span>
+
+          <div className="flex flex-col items-end">
+            <span className="text-2xl sm:text-3xl font-black text-white tracking-tight">
+              {babsCardiniPct}%
+            </span>
+          </div>
         </div>
 
         {/* Dynamic Dual-Color Percentage Bar */}
