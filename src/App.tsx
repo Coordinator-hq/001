@@ -4,8 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { LeaderboardView } from './components/LeaderboardView';
-import { TeamScreen } from './components/TeamScreen';
+import { PvPBattleDashboard } from './components/PvPBattleDashboard';
 import { 
   Team, 
   FanActivityEvent 
@@ -15,15 +14,15 @@ import {
 } from './data/initialLeagueData';
 
 const STORAGE_KEYS = {
-  TEAMS: 'fanbrawl_hardened_v1',
-  EVENTS: 'fanbrawl_events_v1'
+  TEAMS: 'fanbrawl_magicians_loyal_v3',
+  EVENTS: 'fanbrawl_events_magicians_v2'
 };
 
 export default function App() {
   // Navigation State
   const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
 
-  // Teams State - Hardened: starts with 100,000 each for Arsenal, Man City, Man Utd, Chelsea
+  // Teams State - Diamond King vs Babs Cardini
   const [teams, setTeams] = useState<Team[]>(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.TEAMS);
     if (saved) {
@@ -31,8 +30,8 @@ export default function App() {
         const parsed = JSON.parse(saved);
         if (
           Array.isArray(parsed) && 
-          parsed.length === 4 && 
-          parsed.some(t => t.id === 'arsenal') &&
+          parsed.length === 2 && 
+          parsed.some(t => t.id === 'diamond_king') &&
           parsed.every(t => typeof t.totalBalance === 'number' && !isNaN(t.totalBalance))
         ) {
           return parsed.map((savedTeam: Team) => {
@@ -115,28 +114,12 @@ export default function App() {
   const currentSelectedTeam = teams.find((t) => t.id === selectedTeamId);
 
   return (
-    <div className="min-h-screen bg-white text-slate-900 selection:bg-amber-500 selection:text-white p-3 sm:p-5 flex flex-col items-start justify-start">
-      <main className="w-full max-w-4xl mr-auto ml-0">
-        {!selectedTeamId ? (
-          /* Leaderboard of Four Teams: Arsenal, Man City, Man Utd, Chelsea */
-          <LeaderboardView
-            teams={teams}
-            onSelectTeam={(team) => {
-              setSelectedTeamId(team.id);
-              window.scrollTo({ top: 0, behavior: 'smooth' });
-            }}
-          />
-        ) : currentSelectedTeam ? (
-          /* Dedicated Team Screen with Real User Gift Input Console */
-          <TeamScreen
-            team={currentSelectedTeam}
-            onBack={() => {
-              setSelectedTeamId(null);
-              window.scrollTo({ top: 0, behavior: 'smooth' });
-            }}
-            onPaymentSuccess={handlePaymentSuccess}
-          />
-        ) : null}
+    <div className="min-h-screen bg-[#06070c] text-white selection:bg-[#a855f7] selection:text-white p-3 sm:p-6 flex flex-col items-center justify-center">
+      <main className="w-full flex justify-center">
+        <PvPBattleDashboard
+          teams={teams}
+          onPaymentSuccess={handlePaymentSuccess}
+        />
       </main>
     </div>
   );
