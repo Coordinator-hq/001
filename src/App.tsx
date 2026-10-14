@@ -14,8 +14,8 @@ import {
 } from './data/initialLeagueData';
 
 const STORAGE_KEYS = {
-  TEAMS: 'fanbrawl_magicians_loyal_v3',
-  EVENTS: 'fanbrawl_events_magicians_v2'
+  TEAMS: 'fanbrawl_magicians_v5',
+  EVENTS: 'fanbrawl_events_magicians_v3'
 };
 
 export default function App() {
@@ -38,7 +38,7 @@ export default function App() {
             const initial = INITIAL_TEAMS.find((it) => it.id === savedTeam.id);
             return {
               ...savedTeam,
-              logoUrl: savedTeam.logoUrl || initial?.logoUrl
+              logoUrl: initial?.logoUrl || (savedTeam.id === 'diamond_king' ? '/images/diamond_king.jpg' : '/images/babs_cardini.jpg')
             };
           });
         }

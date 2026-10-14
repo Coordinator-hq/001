@@ -4,6 +4,8 @@ import { Team } from '../types/game';
 import { soundManager } from '../utils/audio';
 import { triggerConfetti } from '../utils/confetti';
 import { initiateFlutterwavePayment } from '../utils/flutterwave';
+import diamondKingImg from '../assets/images/diamond_king_original_1791989314302.jpg';
+import babsCardiniImg from '../assets/images/babs_cardini_original_1791989347023.jpg';
 
 interface PvPBattleDashboardProps {
   teams: Team[];
@@ -162,7 +164,13 @@ export const PvPBattleDashboard: React.FC<PvPBattleDashboardProps> = ({
             }`}
           >
             <img
-              src="/src/assets/images/diamond_king_original_1791989314302.jpg"
+              src={diamondKing.logoUrl || diamondKingImg || '/images/diamond_king.jpg'}
+              onError={(e) => {
+                const target = e.currentTarget;
+                if (!target.src.includes('/images/diamond_king.jpg')) {
+                  target.src = '/images/diamond_king.jpg';
+                }
+              }}
               alt="Diamond King"
               className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300"
             />
@@ -204,7 +212,13 @@ export const PvPBattleDashboard: React.FC<PvPBattleDashboardProps> = ({
             }`}
           >
             <img
-              src="/src/assets/images/babs_cardini_original_1791989347023.jpg"
+              src={babsCardini.logoUrl || babsCardiniImg || '/images/babs_cardini.jpg'}
+              onError={(e) => {
+                const target = e.currentTarget;
+                if (!target.src.includes('/images/babs_cardini.jpg')) {
+                  target.src = '/images/babs_cardini.jpg';
+                }
+              }}
               alt="Babs Cardini"
               className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300"
             />
