@@ -4,8 +4,8 @@ import { Team, FanActivityEvent } from '../types/game';
 import { soundManager } from '../utils/audio';
 import { triggerConfetti } from '../utils/confetti';
 import { initiateFlutterwavePayment } from '../utils/flutterwave';
-import diamondKingImg from '../assets/images/diamond_king_original_1791989314302.jpg';
-import babsCardiniImg from '../assets/images/babs_cardini_original_1791989347023.jpg';
+import tachaImg from '../assets/images/tacha_portrait_1792074885755.jpg';
+import mercyLamboImg from '../assets/images/mercy_lambo_portrait_1792074885420.jpg';
 
 interface PvPBattleDashboardProps {
   teams: Team[];
@@ -18,16 +18,16 @@ export const PvPBattleDashboard: React.FC<PvPBattleDashboardProps> = ({
   onPaymentSuccess,
   recentEvents
 }) => {
-  // Find Diamond King and Babs Cardini explicitly
-  const diamondKing = teams.find((t) => t.id === 'diamond_king') || teams[0];
-  const babsCardini = teams.find((t) => t.id === 'babs_cardini') || teams[1] || teams[0];
+  // Find Tacha and Mercy Lambo explicitly
+  const tacha = teams.find((t) => t.id === 'tacha') || teams[0];
+  const mercyLambo = teams.find((t) => t.id === 'mercy_lambo') || teams[1] || teams[0];
 
-  const totalPot = (diamondKing?.totalBalance || 0) + (babsCardini?.totalBalance || 0);
+  const totalPot = (tacha?.totalBalance || 0) + (mercyLambo?.totalBalance || 0);
 
   // Dynamic percentage calculation (defaults to 50/50 when pot is zero)
   const hasPot = totalPot > 0;
-  const diamondKingPct = hasPot ? Math.round((diamondKing.totalBalance / totalPot) * 100) : 50;
-  const babsCardiniPct = hasPot ? 100 - diamondKingPct : 50;
+  const tachaPct = hasPot ? Math.round((tacha.totalBalance / totalPot) * 100) : 50;
+  const mercyLamboPct = hasPot ? 100 - tachaPct : 50;
 
   // 10-Minute Battle Countdown Timer (Starts NOW for 10 minutes: 10:00 -> 00:00)
   const DURATION_SECONDS = 10 * 60; // 600 seconds
@@ -70,9 +70,9 @@ export const PvPBattleDashboard: React.FC<PvPBattleDashboardProps> = ({
   const seconds = timeLeft % 60;
   const timerDisplay = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
 
-  // Selected magician to gift to (defaults to Diamond King)
-  const [selectedTeamId, setSelectedTeamId] = useState<'diamond_king' | 'babs_cardini'>('diamond_king');
-  const activeTeam = selectedTeamId === 'diamond_king' ? diamondKing : babsCardini;
+  // Selected icon to gift to (defaults to Tacha)
+  const [selectedTeamId, setSelectedTeamId] = useState<'tacha' | 'mercy_lambo' | string>('tacha');
+  const activeTeam = selectedTeamId === 'tacha' ? tacha : mercyLambo;
 
   // Gifting state
   const [selectedAmount, setSelectedAmount] = useState<number>(100);
@@ -132,7 +132,7 @@ export const PvPBattleDashboard: React.FC<PvPBattleDashboardProps> = ({
     });
   };
 
-  const activeColor = selectedTeamId === 'diamond_king' ? '#EF4444' : '#3B82F6';
+  const activeColor = selectedTeamId === 'tacha' ? '#F43F5E' : '#3B82F6';
 
   return (
     <div className="w-full max-w-[480px] mx-auto space-y-4 font-sans select-none animate-fadeIn pb-6">
@@ -152,7 +152,7 @@ export const PvPBattleDashboard: React.FC<PvPBattleDashboardProps> = ({
         <div className="flex justify-between items-center px-1 mb-2.5">
           <div className="flex flex-col items-start">
             <span className="text-2xl sm:text-3xl font-black text-white tracking-tight">
-              {diamondKingPct}%
+              {tachaPct}%
             </span>
           </div>
 
@@ -177,35 +177,35 @@ export const PvPBattleDashboard: React.FC<PvPBattleDashboardProps> = ({
 
           <div className="flex flex-col items-end">
             <span className="text-2xl sm:text-3xl font-black text-white tracking-tight">
-              {babsCardiniPct}%
+              {mercyLamboPct}%
             </span>
           </div>
         </div>
 
         {/* Dynamic Dual-Color Percentage Bar */}
         <div className="w-full h-3.5 sm:h-4 bg-[#141628] rounded-full overflow-hidden flex border border-[#232742] p-0.5 shadow-inner">
-          {/* Diamond King Left Portion (Vibrant Red) */}
+          {/* Tacha Left Portion (Vibrant Rose/Crimson) */}
           <div
-            className="h-full bg-gradient-to-r from-[#DC2626] via-[#EF4444] to-[#F87171] rounded-l-full transition-all duration-700 shadow-[0_0_12px_rgba(239,68,68,0.5)]"
-            style={{ width: `${diamondKingPct}%` }}
+            className="h-full bg-gradient-to-r from-[#BE123C] via-[#E11D48] to-[#FB7185] rounded-l-full transition-all duration-700 shadow-[0_0_12px_rgba(244,63,94,0.5)]"
+            style={{ width: `${tachaPct}%` }}
           />
-          {/* Babs Cardini Right Portion (Vibrant Blue) */}
+          {/* Mercy Lambo Right Portion (Vibrant Blue) */}
           <div
             className="h-full bg-gradient-to-r from-[#1D4ED8] via-[#3B82F6] to-[#60A5FA] rounded-r-full transition-all duration-700 shadow-[0_0_12px_rgba(59,130,246,0.5)]"
-            style={{ width: `${babsCardiniPct}%` }}
+            style={{ width: `${mercyLamboPct}%` }}
           />
         </div>
 
         {/* Dynamic Live Balance Sub-bar */}
         <div className="flex justify-between items-center text-[11px] font-bold text-slate-400 mt-2 px-1">
-          <span className="text-[#EF4444] tabular-nums">
-            ₦{diamondKing.totalBalance.toLocaleString()}
+          <span className="text-[#F43F5E] tabular-nums">
+            ₦{tacha.totalBalance.toLocaleString()}
           </span>
           <span className="text-slate-500 text-[10px] uppercase tracking-wider font-semibold">
-            Tap magician to gift
+            Tap star to gift
           </span>
           <span className="text-[#3B82F6] tabular-nums">
-            ₦{babsCardini.totalBalance.toLocaleString()}
+            ₦{mercyLambo.totalBalance.toLocaleString()}
           </span>
         </div>
 
@@ -219,36 +219,31 @@ export const PvPBattleDashboard: React.FC<PvPBattleDashboardProps> = ({
             <span className="text-slate-400">to</span>
             <span
               className="font-bold"
-              style={{ color: recentEvents[0].teamId === 'diamond_king' ? '#EF4444' : '#3B82F6' }}
+              style={{ color: recentEvents[0].teamId === 'tacha' ? '#F43F5E' : '#3B82F6' }}
             >
               {recentEvents[0].teamName}
             </span>
           </div>
         )}
 
-        {/* Matchup Portraits Section: Diamond King v Babs Cardini with "Vs" Badge */}
+        {/* Matchup Portraits Section: Tacha v Mercy Lambo with "Vs" Badge */}
         <div className="relative mt-3.5 grid grid-cols-2 gap-2 sm:gap-2.5">
           
-          {/* Diamond King Portrait Card (Left) */}
+          {/* Tacha Portrait Card (Left) */}
           <button
             type="button"
-            onClick={() => setSelectedTeamId('diamond_king')}
-            aria-label="Select Diamond King"
+            onClick={() => setSelectedTeamId('tacha')}
+            aria-label="Select Tacha"
             className={`relative aspect-square sm:aspect-[4/4.5] rounded-2xl overflow-hidden cursor-pointer transition-all duration-200 group text-left border ${
-              selectedTeamId === 'diamond_king'
-                ? 'border-2 border-[#EF4444] shadow-[0_0_22px_rgba(239,68,68,0.4)] scale-[1.01]'
-                : 'border-[#1e2238] hover:border-[#EF4444]/60 opacity-90 hover:opacity-100'
+              selectedTeamId === 'tacha'
+                ? 'border-2 border-[#F43F5E] shadow-[0_0_22px_rgba(244,63,94,0.45)] scale-[1.01]'
+                : 'border-[#1e2238] hover:border-[#F43F5E]/60 opacity-90 hover:opacity-100'
             }`}
           >
             <img
-              src={diamondKing.logoUrl || diamondKingImg || '/images/diamond_king.jpg'}
-              onError={(e) => {
-                const target = e.currentTarget;
-                if (!target.src.includes('/images/diamond_king.jpg')) {
-                  target.src = '/images/diamond_king.jpg';
-                }
-              }}
-              alt="Diamond King"
+              src={tacha.logoUrl || tachaImg}
+              alt="Tacha"
+              referrerPolicy="no-referrer"
               className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300"
             />
             {/* Vignette Gradient Overlay */}
@@ -257,16 +252,16 @@ export const PvPBattleDashboard: React.FC<PvPBattleDashboardProps> = ({
             {/* Bottom Name Label */}
             <div className="absolute bottom-2 sm:bottom-2.5 inset-x-0 text-center pointer-events-none px-1">
               <span className="text-base sm:text-lg font-black text-white tracking-wide drop-shadow-md block leading-tight">
-                Diamond King
+                {tacha.name}
               </span>
-              <span className="text-[10px] text-red-400 font-bold uppercase tracking-wider block">
-                Magician
+              <span className="text-[10px] text-rose-400 font-bold uppercase tracking-wider block">
+                {tacha.slogan || 'Titan Queen'}
               </span>
             </div>
 
             {/* Active Glow Indicator */}
-            {selectedTeamId === 'diamond_king' && (
-              <div className="absolute top-2 left-2 w-2 h-2 rounded-full bg-[#EF4444] shadow-[0_0_8px_#EF4444]" />
+            {selectedTeamId === 'tacha' && (
+              <div className="absolute top-2 left-2 w-2 h-2 rounded-full bg-[#F43F5E] shadow-[0_0_8px_#F43F5E]" />
             )}
           </button>
 
@@ -277,26 +272,21 @@ export const PvPBattleDashboard: React.FC<PvPBattleDashboardProps> = ({
             </span>
           </div>
 
-          {/* Babs Cardini Portrait Card (Right) */}
+          {/* Mercy Lambo Portrait Card (Right) */}
           <button
             type="button"
-            onClick={() => setSelectedTeamId('babs_cardini')}
-            aria-label="Select Babs Cardini"
+            onClick={() => setSelectedTeamId('mercy_lambo')}
+            aria-label="Select Mercy Lambo"
             className={`relative aspect-square sm:aspect-[4/4.5] rounded-2xl overflow-hidden cursor-pointer transition-all duration-200 group text-left border ${
-              selectedTeamId === 'babs_cardini'
-                ? 'border-2 border-[#3B82F6] shadow-[0_0_22px_rgba(59,130,246,0.4)] scale-[1.01]'
+              selectedTeamId === 'mercy_lambo'
+                ? 'border-2 border-[#3B82F6] shadow-[0_0_22px_rgba(59,130,246,0.45)] scale-[1.01]'
                 : 'border-[#1e2238] hover:border-[#3B82F6]/60 opacity-90 hover:opacity-100'
             }`}
           >
             <img
-              src={babsCardini.logoUrl || babsCardiniImg || '/images/babs_cardini.jpg'}
-              onError={(e) => {
-                const target = e.currentTarget;
-                if (!target.src.includes('/images/babs_cardini.jpg')) {
-                  target.src = '/images/babs_cardini.jpg';
-                }
-              }}
-              alt="Babs Cardini"
+              src={mercyLambo.logoUrl || mercyLamboImg}
+              alt="Mercy Lambo"
+              referrerPolicy="no-referrer"
               className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300"
             />
             {/* Vignette Gradient Overlay */}
@@ -305,15 +295,15 @@ export const PvPBattleDashboard: React.FC<PvPBattleDashboardProps> = ({
             {/* Bottom Name Label */}
             <div className="absolute bottom-2 sm:bottom-2.5 inset-x-0 text-center pointer-events-none px-1">
               <span className="text-base sm:text-lg font-black text-white tracking-wide drop-shadow-md block leading-tight">
-                Babs Cardini
+                {mercyLambo.name}
               </span>
               <span className="text-[10px] text-blue-400 font-bold uppercase tracking-wider block">
-                Magician
+                {mercyLambo.slogan || 'Lambo Queen'}
               </span>
             </div>
 
             {/* Active Glow Indicator */}
-            {selectedTeamId === 'babs_cardini' && (
+            {selectedTeamId === 'mercy_lambo' && (
               <div className="absolute top-2 right-2 w-2 h-2 rounded-full bg-[#3B82F6] shadow-[0_0_8px_#3B82F6]" />
             )}
           </button>
@@ -346,9 +336,9 @@ export const PvPBattleDashboard: React.FC<PvPBattleDashboardProps> = ({
           {presetAmounts.map((val) => {
             const isSelected = selectedAmount === val && customAmount === '';
 
-            // Selected button border/glow matches the active magician's color (red or blue)
-            const activeStyle = selectedTeamId === 'diamond_king'
-              ? 'border-2 border-[#EF4444] text-white bg-[#EF4444]/15 shadow-[0_0_16px_rgba(239,68,68,0.3)]'
+            // Selected button border/glow matches the active icon's color (rose or blue)
+            const activeStyle = selectedTeamId === 'tacha'
+              ? 'border-2 border-[#F43F5E] text-white bg-[#F43F5E]/15 shadow-[0_0_16px_rgba(244,63,94,0.3)]'
               : 'border-2 border-[#3B82F6] text-white bg-[#3B82F6]/15 shadow-[0_0_16px_rgba(59,130,246,0.3)]';
 
             return (
@@ -397,14 +387,14 @@ export const PvPBattleDashboard: React.FC<PvPBattleDashboardProps> = ({
             onClick={handlePay}
             aria-label={`Gift ₦${selectedAmount.toLocaleString()} to ${activeTeam.name}`}
             className={`w-13 h-13 sm:w-14 sm:h-14 rounded-xl border flex items-center justify-center shrink-0 cursor-pointer active:scale-95 transition-all disabled:opacity-50 ${
-              selectedTeamId === 'diamond_king'
-                ? 'border-red-500/70 bg-gradient-to-br from-red-700/30 to-red-500/25 hover:from-red-700/50 hover:to-red-500/40 shadow-[0_0_20px_rgba(239,68,68,0.35)]'
+              selectedTeamId === 'tacha'
+                ? 'border-rose-500/70 bg-gradient-to-br from-rose-700/30 to-rose-500/25 hover:from-rose-700/50 hover:to-rose-500/40 shadow-[0_0_20px_rgba(244,63,94,0.35)]'
                 : 'border-blue-500/70 bg-gradient-to-br from-blue-700/30 to-blue-500/25 hover:from-blue-700/50 hover:to-blue-500/40 shadow-[0_0_20px_rgba(59,130,246,0.35)]'
             }`}
           >
             <Gift
               className={`w-5 h-5 sm:w-6 sm:h-6 ${
-                selectedTeamId === 'diamond_king' ? 'text-red-400' : 'text-blue-400'
+                selectedTeamId === 'tacha' ? 'text-rose-400' : 'text-blue-400'
               }`}
             />
           </button>

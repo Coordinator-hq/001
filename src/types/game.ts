@@ -116,3 +116,17 @@ export interface TriviaQuestion {
   explanation: string;
   reward: number;
 }
+
+export interface Matchup {
+  id: string;
+  title: string;
+  subtitle: string;
+  category: string;
+  teams: Team[];
+  durationSeconds: number;
+  endsAt: number;
+  status: 'live' | 'upcoming' | 'completed';
+  viewersCount: number;
+  totalPot: number;
+}
+

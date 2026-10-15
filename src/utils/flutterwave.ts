@@ -17,7 +17,20 @@ declare global {
   }
 }
 
+// In-memory idempotency cache to prevent replay attacks and double-crediting
+const processedTxRefs = new Set<string>();
+
+export const MIN_GIFT_AMOUNT = 100;
+export const MAX_GIFT_AMOUNT = 5_000_000;
+
 export function initiateFlutterwavePayment(config: FlutterwavePaymentConfig) {
+  // Validate sanitized amount bounds
+  const validatedAmount = Math.floor(Number(config.amount) || 0);
+  if (isNaN(validatedAmount) || validatedAmount < MIN_GIFT_AMOUNT || validatedAmount > MAX_GIFT_AMOUNT) {
+    console.error(`[FanBrawl Security] Invalid payment amount: ${config.amount}`);
+    return false;
+  }
+
   // Uses configured live or test key from environment or fallback
   const publicKey =
     (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_FLUTTERWAVE_PUBLIC_KEY) ||
@@ -32,7 +45,7 @@ export function initiateFlutterwavePayment(config: FlutterwavePaymentConfig) {
   const checkoutOptions = {
     public_key: publicKey,
     tx_ref: txRef,
-    amount: config.amount,
+    amount: validatedAmount,
     currency: 'NGN',
     payment_options: 'card,banktransfer,ussd,mobilemoney,qr',
     customer: {
@@ -41,22 +54,38 @@ export function initiateFlutterwavePayment(config: FlutterwavePaymentConfig) {
     },
     customizations: {
       title: `${config.teamName} - FanBrawl Gift`,
-      description: `Gift to ${config.teamName} on FanBrawl (₦${config.amount.toLocaleString()})`
+      description: `Gift to ${config.teamName} on FanBrawl (₦${validatedAmount.toLocaleString()})`
     },
     meta: {
       team_id: config.teamId,
       team_name: config.teamName,
       team_tag: config.teamTag || '',
-      pot_amount_ngn: config.amount,
+      pot_amount_ngn: validatedAmount,
       gift_timestamp: new Date().toISOString(),
       platform: 'FanBrawl'
     },
     callback: function (data: { transaction_id?: string; tx_ref?: string; amount?: number; status?: string }) {
-      if (data.status === 'successful' || data.status === 'completed' || !data.status) {
+      const incomingTxRef = String(data.tx_ref || txRef);
+
+      // Idempotency: Reject if this tx_ref has already been credited
+      if (processedTxRefs.has(incomingTxRef)) {
+        console.warn(`[FanBrawl Security] Duplicate callback ignored for tx_ref: ${incomingTxRef}`);
+        return;
+      }
+
+      const isSuccessful = data.status === 'successful' || data.status === 'completed' || !data.status;
+      if (isSuccessful) {
+        processedTxRefs.add(incomingTxRef);
+
+        const verifiedAmount = Math.min(
+          MAX_GIFT_AMOUNT,
+          Math.max(MIN_GIFT_AMOUNT, Number(data.amount || validatedAmount))
+        );
+
         config.onSuccess({
-          transaction_id: String(data.transaction_id || txRef),
-          tx_ref: String(data.tx_ref || txRef),
-          amount: Number(data.amount || config.amount),
+          transaction_id: String(data.transaction_id || incomingTxRef),
+          tx_ref: incomingTxRef,
+          amount: verifiedAmount,
           status: 'successful'
         });
       }
@@ -70,7 +99,19 @@ export function initiateFlutterwavePayment(config: FlutterwavePaymentConfig) {
 
   if (typeof window.FlutterwaveCheckout === 'function') {
     window.FlutterwaveCheckout(checkoutOptions);
+    return true;
   } else {
+    // Avoid creating duplicate script tags if one is already present
+    const existingScript = document.querySelector('script[src*="checkout.flutterwave.com"]');
+    if (existingScript) {
+      existingScript.addEventListener('load', () => {
+        if (typeof window.FlutterwaveCheckout === 'function') {
+          window.FlutterwaveCheckout(checkoutOptions);
+        }
+      });
+      return true;
+    }
+
     const script = document.createElement('script');
     script.src = 'https://checkout.flutterwave.com/v3.js';
     script.async = true;
@@ -80,5 +121,6 @@ export function initiateFlutterwavePayment(config: FlutterwavePaymentConfig) {
       }
     };
     document.body.appendChild(script);
+    return true;
   }
 }

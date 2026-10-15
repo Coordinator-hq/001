@@ -14,15 +14,15 @@ import {
 } from './data/initialLeagueData';
 
 const STORAGE_KEYS = {
-  TEAMS: 'fanbrawl_magicians_pot_v2',
-  EVENTS: 'fanbrawl_events_magicians_v2'
+  TEAMS: 'fanbrawl_matchup_tacha_mercy_v1',
+  EVENTS: 'fanbrawl_events_tacha_mercy_v1'
 };
 
 export default function App() {
   // Navigation State
   const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
 
-  // Teams State - Diamond King vs Babs Cardini
+  // Teams State - Tacha vs Mercy Lambo
   const [teams, setTeams] = useState<Team[]>(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.TEAMS);
     if (saved) {
@@ -31,21 +31,21 @@ export default function App() {
         if (
           Array.isArray(parsed) && 
           parsed.length === 2 && 
-          parsed.some(t => t.id === 'diamond_king') &&
+          parsed.some(t => t.id === 'tacha') &&
           parsed.every(t => typeof t.totalBalance === 'number' && !isNaN(t.totalBalance))
         ) {
           return parsed.map((savedTeam: Team) => {
             const initial = INITIAL_TEAMS.find((it) => it.id === savedTeam.id);
             const baseBalance = savedTeam.totalBalance > 0
               ? savedTeam.totalBalance
-              : (savedTeam.id === 'diamond_king' ? 14200 : 13800);
+              : (savedTeam.id === 'tacha' ? 24500 : 23800);
             return {
               ...savedTeam,
               totalBalance: baseBalance,
-              primaryColor: initial?.primaryColor || (savedTeam.id === 'diamond_king' ? '#EF4444' : '#3B82F6'),
-              accentColor: initial?.accentColor || (savedTeam.id === 'diamond_king' ? '#F87171' : '#60A5FA'),
-              bgGradient: initial?.bgGradient || (savedTeam.id === 'diamond_king' ? 'from-red-500/20 via-rose-500/10 to-transparent' : 'from-blue-500/25 via-indigo-500/10 to-transparent'),
-              logoUrl: initial?.logoUrl || (savedTeam.id === 'diamond_king' ? '/images/diamond_king.jpg' : '/images/babs_cardini.jpg')
+              primaryColor: initial?.primaryColor || (savedTeam.id === 'tacha' ? '#F43F5E' : '#3B82F6'),
+              accentColor: initial?.accentColor || (savedTeam.id === 'tacha' ? '#FDA4AF' : '#60A5FA'),
+              bgGradient: initial?.bgGradient || (savedTeam.id === 'tacha' ? 'from-rose-500/25 via-pink-500/10 to-transparent' : 'from-blue-500/25 via-indigo-500/10 to-transparent'),
+              logoUrl: initial?.logoUrl
             };
           });
         }
@@ -55,7 +55,7 @@ export default function App() {
     }
     return INITIAL_TEAMS.map((t) => ({
       ...t,
-      totalBalance: t.totalBalance > 0 ? t.totalBalance : (t.id === 'diamond_king' ? 14200 : 13800)
+      totalBalance: t.totalBalance > 0 ? t.totalBalance : (t.id === 'tacha' ? 24500 : 23800)
     }));
   });
 
@@ -71,9 +71,10 @@ export default function App() {
   // Automated dynamic updates to pot balance (independent of user inputs)
   useEffect(() => {
     const NIGERIAN_FAN_NAMES = [
-      'Tunde A.', 'Amina K.', 'Chidi O.', 'Blessing N.', 'Emeka E.', 
-      'Zainab B.', 'Femi D.', 'Ngozi P.', 'Ibrahim M.', 'Funke Y.',
-      'Damilola S.', 'Kelechi R.', 'Chioma V.', 'Segun T.', 'Halima U.',
+      'Titan_Chioma', 'Mercenary_Joy', 'Titan_Blessing', 'Mercenary_Queen',
+      'Tunde A.', 'Amina K.', 'Titans_NLNT', 'Emeka E.', 'Lambo_Shield', 
+      'Zainab B.', 'Femi D.', 'Ngozi P.', 'Ibrahim M.', 'Funke Y.', 
+      'Damilola S.', 'Kelechi R.', 'Chioma V.', 'Segun T.', 'Halima U.', 
       'Babatunde W.', 'Folake M.', 'Uche C.', 'Adeola J.', 'Yusuf G.'
     ];
 
@@ -81,19 +82,19 @@ export default function App() {
 
     const executeSimulatedGift = () => {
       setTeams((prevTeams) => {
-        const dk = prevTeams.find((t) => t.id === 'diamond_king');
-        const bc = prevTeams.find((t) => t.id === 'babs_cardini');
-        if (!dk || !bc) return prevTeams;
+        const tacha = prevTeams.find((t) => t.id === 'tacha') || prevTeams[0];
+        const mercy = prevTeams.find((t) => t.id === 'mercy_lambo') || prevTeams[1];
+        if (!tacha || !mercy) return prevTeams;
 
         // Choose target team with natural close competition
-        let targetId = 'diamond_king';
-        const diff = dk.totalBalance - bc.totalBalance;
+        let targetId = tacha.id;
+        const diff = tacha.totalBalance - mercy.totalBalance;
         if (diff > 3500) {
-          targetId = Math.random() < 0.65 ? 'babs_cardini' : 'diamond_king';
+          targetId = Math.random() < 0.65 ? mercy.id : tacha.id;
         } else if (diff < -3500) {
-          targetId = Math.random() < 0.65 ? 'diamond_king' : 'babs_cardini';
+          targetId = Math.random() < 0.65 ? tacha.id : mercy.id;
         } else {
-          targetId = Math.random() < 0.5 ? 'diamond_king' : 'babs_cardini';
+          targetId = Math.random() < 0.5 ? tacha.id : mercy.id;
         }
 
         // Weighted gift amounts: amounts less than ₦500 are very very rare (less than 2% combined)
