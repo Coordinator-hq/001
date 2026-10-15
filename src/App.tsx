@@ -14,8 +14,8 @@ import {
 } from './data/initialLeagueData';
 
 const STORAGE_KEYS = {
-  TEAMS: 'fanbrawl_magicians_zero_pot_v1',
-  EVENTS: 'fanbrawl_events_magicians_zero_v1'
+  TEAMS: 'fanbrawl_magicians_pot_v2',
+  EVENTS: 'fanbrawl_events_magicians_v2'
 };
 
 export default function App() {
@@ -36,8 +36,12 @@ export default function App() {
         ) {
           return parsed.map((savedTeam: Team) => {
             const initial = INITIAL_TEAMS.find((it) => it.id === savedTeam.id);
+            const baseBalance = savedTeam.totalBalance > 0
+              ? savedTeam.totalBalance
+              : (savedTeam.id === 'diamond_king' ? 14200 : 13800);
             return {
               ...savedTeam,
+              totalBalance: baseBalance,
               primaryColor: initial?.primaryColor || (savedTeam.id === 'diamond_king' ? '#EF4444' : '#3B82F6'),
               accentColor: initial?.accentColor || (savedTeam.id === 'diamond_king' ? '#F87171' : '#60A5FA'),
               bgGradient: initial?.bgGradient || (savedTeam.id === 'diamond_king' ? 'from-red-500/20 via-rose-500/10 to-transparent' : 'from-blue-500/25 via-indigo-500/10 to-transparent'),
@@ -49,10 +53,13 @@ export default function App() {
         console.error(e);
       }
     }
-    return INITIAL_TEAMS;
+    return INITIAL_TEAMS.map((t) => ({
+      ...t,
+      totalBalance: t.totalBalance > 0 ? t.totalBalance : (t.id === 'diamond_king' ? 14200 : 13800)
+    }));
   });
 
-  // Fan Activity Events - strictly from real user contributions
+  // Fan Activity Events - populated dynamically by simulation and real gifts
   const [liveEvents, setLiveEvents] = useState<FanActivityEvent[]>(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.EVENTS);
     if (saved) {
@@ -61,7 +68,97 @@ export default function App() {
     return [];
   });
 
-  // NO automated steady stream of gifts - balance strictly controlled by real user inputs
+  // Automated dynamic updates to pot balance (independent of user inputs)
+  useEffect(() => {
+    const NIGERIAN_FAN_NAMES = [
+      'Tunde A.', 'Amina K.', 'Chidi O.', 'Blessing N.', 'Emeka E.', 
+      'Zainab B.', 'Femi D.', 'Ngozi P.', 'Ibrahim M.', 'Funke Y.',
+      'Damilola S.', 'Kelechi R.', 'Chioma V.', 'Segun T.', 'Halima U.',
+      'Babatunde W.', 'Folake M.', 'Uche C.', 'Adeola J.', 'Yusuf G.'
+    ];
+
+    let timerId: ReturnType<typeof setTimeout>;
+
+    const executeSimulatedGift = () => {
+      setTeams((prevTeams) => {
+        const dk = prevTeams.find((t) => t.id === 'diamond_king');
+        const bc = prevTeams.find((t) => t.id === 'babs_cardini');
+        if (!dk || !bc) return prevTeams;
+
+        // Choose target team with natural close competition
+        let targetId = 'diamond_king';
+        const diff = dk.totalBalance - bc.totalBalance;
+        if (diff > 3500) {
+          targetId = Math.random() < 0.65 ? 'babs_cardini' : 'diamond_king';
+        } else if (diff < -3500) {
+          targetId = Math.random() < 0.65 ? 'diamond_king' : 'babs_cardini';
+        } else {
+          targetId = Math.random() < 0.5 ? 'diamond_king' : 'babs_cardini';
+        }
+
+        // Weighted gift amounts: amounts less than ₦500 are very very rare (less than 2% combined)
+        const rand = Math.random();
+        let amount = 500;
+        if (rand < 0.007) {
+          amount = 100; // ~0.7% - very very rare
+        } else if (rand < 0.02) {
+          amount = 200; // ~1.3% - very very rare
+        } else if (rand < 0.42) {
+          amount = 500; // ~40% - standard baseline
+        } else if (rand < 0.74) {
+          amount = 1000; // ~32% - popular gift
+        } else if (rand < 0.90) {
+          amount = 2000; // ~16% - strong support
+        } else if (rand < 0.97) {
+          amount = 5000; // ~7% - big gift
+        } else if (rand < 0.993) {
+          amount = 10000; // ~2.3% - major drop
+        } else {
+          amount = 20000; // ~0.7% - whale gift
+        }
+
+        const updated = prevTeams.map((team) => {
+          if (team.id === targetId) {
+            return {
+              ...team,
+              totalBalance: team.totalBalance + amount,
+              fanCount: team.fanCount + 1
+            };
+          }
+          return team;
+        });
+
+        // Record simulated fan activity event for the live ticker
+        const targetTeam = prevTeams.find((t) => t.id === targetId);
+        const fanName = NIGERIAN_FAN_NAMES[Math.floor(Math.random() * NIGERIAN_FAN_NAMES.length)];
+        const newEvt: FanActivityEvent = {
+          id: `evt_sim_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+          timestamp: Date.now(),
+          fanName: fanName,
+          amount: amount,
+          teamId: targetId,
+          teamName: targetTeam?.name || 'Team',
+          eventType: amount >= 5000 ? 'whale' : 'donation',
+          message: `Gifted ₦${amount.toLocaleString()} to ${targetTeam?.name || 'Team'}`
+        };
+
+        setLiveEvents((prev) => [newEvt, ...prev.slice(0, 39)]);
+
+        return updated;
+      });
+
+      // Schedule next dynamic gift tick between 1.5s and 3.5s
+      const delay = 1500 + Math.random() * 2000;
+      timerId = setTimeout(executeSimulatedGift, delay);
+    };
+
+    // First simulated gift triggers quickly (800ms after load)
+    timerId = setTimeout(executeSimulatedGift, 800);
+
+    return () => {
+      clearTimeout(timerId);
+    };
+  }, []);
 
   // Persistence
   useEffect(() => {
@@ -122,6 +219,7 @@ export default function App() {
         <PvPBattleDashboard
           teams={teams}
           onPaymentSuccess={handlePaymentSuccess}
+          recentEvents={liveEvents}
         />
       </main>
     </div>

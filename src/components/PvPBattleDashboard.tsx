@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Gift, CheckCircle2, Timer } from 'lucide-react';
-import { Team } from '../types/game';
+import { Team, FanActivityEvent } from '../types/game';
 import { soundManager } from '../utils/audio';
 import { triggerConfetti } from '../utils/confetti';
 import { initiateFlutterwavePayment } from '../utils/flutterwave';
@@ -10,11 +10,13 @@ import babsCardiniImg from '../assets/images/babs_cardini_original_1791989347023
 interface PvPBattleDashboardProps {
   teams: Team[];
   onPaymentSuccess: (teamId: string, amount: number) => void;
+  recentEvents?: FanActivityEvent[];
 }
 
 export const PvPBattleDashboard: React.FC<PvPBattleDashboardProps> = ({
   teams,
-  onPaymentSuccess
+  onPaymentSuccess,
+  recentEvents
 }) => {
   // Find Diamond King and Babs Cardini explicitly
   const diamondKing = teams.find((t) => t.id === 'diamond_king') || teams[0];
@@ -27,37 +29,40 @@ export const PvPBattleDashboard: React.FC<PvPBattleDashboardProps> = ({
   const diamondKingPct = hasPot ? Math.round((diamondKing.totalBalance / totalPot) * 100) : 50;
   const babsCardiniPct = hasPot ? 100 - diamondKingPct : 50;
 
-  // 10-Minute Battle Countdown Timer (Active & ticking)
+  // 10-Minute Battle Countdown Timer (Starts NOW for 10 minutes: 10:00 -> 00:00)
+  const DURATION_SECONDS = 10 * 60; // 600 seconds
+  const TIMER_STORAGE_KEY = 'fanbrawl_battle_timer_10m_now_v1';
+
   const [timeLeft, setTimeLeft] = useState<number>(() => {
-    const STORAGE_KEY = 'fanbrawl_battle_timer_end_v1';
-    const saved = localStorage.getItem(STORAGE_KEY);
+    const saved = localStorage.getItem(TIMER_STORAGE_KEY);
     const now = Date.now();
     if (saved) {
       const target = parseInt(saved, 10);
-      if (!isNaN(target) && target > now) {
+      if (!isNaN(target) && target > now && target <= now + DURATION_SECONDS * 1000) {
         return Math.floor((target - now) / 1000);
       }
     }
-    const newEnd = now + 10 * 60 * 1000;
-    localStorage.setItem(STORAGE_KEY, newEnd.toString());
-    return 10 * 60;
+    // Set timer to start right NOW for 10 minutes
+    const newTarget = now + DURATION_SECONDS * 1000;
+    localStorage.setItem(TIMER_STORAGE_KEY, newTarget.toString());
+    return DURATION_SECONDS;
   });
 
   useEffect(() => {
-    const STORAGE_KEY = 'fanbrawl_battle_timer_end_v1';
-    const updateTime = () => {
+    const interval = setInterval(() => {
       const now = Date.now();
-      let target = parseInt(localStorage.getItem(STORAGE_KEY) || '0', 10);
-      if (!target || target <= now) {
-        target = now + 10 * 60 * 1000;
-        localStorage.setItem(STORAGE_KEY, target.toString());
-      }
-      const remainingSeconds = Math.max(0, Math.floor((target - now) / 1000));
-      setTimeLeft(remainingSeconds);
-    };
+      let target = parseInt(localStorage.getItem(TIMER_STORAGE_KEY) || '0', 10);
 
-    updateTime();
-    const interval = setInterval(updateTime, 1000);
+      // Reset to a fresh 10-minute round when finished
+      if (!target || target <= now) {
+        target = now + DURATION_SECONDS * 1000;
+        localStorage.setItem(TIMER_STORAGE_KEY, target.toString());
+      }
+
+      const remaining = Math.max(0, Math.floor((target - now) / 1000));
+      setTimeLeft(remaining);
+    }, 1000);
+
     return () => clearInterval(interval);
   }, []);
 
@@ -160,7 +165,9 @@ export const PvPBattleDashboard: React.FC<PvPBattleDashboardProps> = ({
             </span>
             
             {/* 10-Minute Battle Countdown Timer */}
-            <div className="flex items-center gap-1.5 mt-1 text-[11px] font-mono text-slate-200 bg-slate-900/80 border border-slate-700/60 px-2.5 py-0.5 rounded-full shadow-md">
+            <div
+              className="flex items-center gap-1.5 mt-1 text-[11px] font-mono text-slate-200 bg-slate-900/80 border border-slate-700/60 px-2.5 py-0.5 rounded-full shadow-md"
+            >
               <Timer className="w-3 h-3 text-amber-400 animate-pulse" />
               <span className="tabular-nums font-bold tracking-wider text-slate-100">
                 {timerDisplay}
@@ -201,6 +208,23 @@ export const PvPBattleDashboard: React.FC<PvPBattleDashboardProps> = ({
             ₦{babsCardini.totalBalance.toLocaleString()}
           </span>
         </div>
+
+        {/* Real-time simulated fan activity live ticker */}
+        {recentEvents && recentEvents.length > 0 && (
+          <div className="flex items-center justify-center gap-1.5 mt-2.5 py-1 px-3 rounded-full bg-[#121424] border border-[#232742] text-[10px] text-slate-300 animate-fadeIn">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+            <span className="font-bold text-white">{recentEvents[0].fanName}</span>
+            <span className="text-slate-400">gifted</span>
+            <span className="font-black text-amber-400 tabular-nums">₦{recentEvents[0].amount.toLocaleString()}</span>
+            <span className="text-slate-400">to</span>
+            <span
+              className="font-bold"
+              style={{ color: recentEvents[0].teamId === 'diamond_king' ? '#EF4444' : '#3B82F6' }}
+            >
+              {recentEvents[0].teamName}
+            </span>
+          </div>
+        )}
 
         {/* Matchup Portraits Section: Diamond King v Babs Cardini with "Vs" Badge */}
         <div className="relative mt-3.5 grid grid-cols-2 gap-2 sm:gap-2.5">
