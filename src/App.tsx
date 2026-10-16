@@ -4,224 +4,415 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { Trophy, ChevronLeft, ChevronRight } from 'lucide-react';
 import { PvPBattleDashboard } from './components/PvPBattleDashboard';
-import { 
-  Team, 
-  FanActivityEvent 
-} from './types/game';
-import { 
-  INITIAL_TEAMS 
-} from './data/initialLeagueData';
+import { LeaderboardView, FandomLeaderboardItem } from './components/LeaderboardView';
+import { Team, FanActivityEvent } from './types/game';
+import { INITIAL_BATTLES } from './data/initialLeagueData';
 
 const STORAGE_KEYS = {
-  TEAMS: 'fanbrawl_matchup_tacha_mercy_v1',
-  EVENTS: 'fanbrawl_events_tacha_mercy_v1'
+  BATTLES: 'fanbrawl_battles_burna_ayra_v3',
+  EVENTS: 'fanbrawl_events_burna_ayra_v3'
 };
 
 export default function App() {
-  // Navigation State
-  const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
+  const [currentBattleIndex, setCurrentBattleIndex] = useState<number>(0);
+  const [showLeaderboard, setShowLeaderboard] = useState<boolean>(false);
 
-  // Teams State - Tacha vs Mercy Lambo
-  const [teams, setTeams] = useState<Team[]>(() => {
-    const saved = localStorage.getItem(STORAGE_KEYS.TEAMS);
+  // Battles State (Burna vs Davido, Ayra vs Tiwa, Davido vs Wizkid, Nicki vs Cardi, Tacha vs Mercy)
+  const [battles, setBattles] = useState(() => {
+    const saved = localStorage.getItem(STORAGE_KEYS.BATTLES);
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        if (
-          Array.isArray(parsed) && 
-          parsed.length === 2 && 
-          parsed.some(t => t.id === 'tacha') &&
-          parsed.every(t => typeof t.totalBalance === 'number' && !isNaN(t.totalBalance))
-        ) {
-          return parsed.map((savedTeam: Team) => {
-            const initial = INITIAL_TEAMS.find((it) => it.id === savedTeam.id);
-            const baseBalance = savedTeam.totalBalance > 0
-              ? savedTeam.totalBalance
-              : (savedTeam.id === 'tacha' ? 24500 : 23800);
+        if (Array.isArray(parsed) && parsed.length >= 5) {
+          return parsed.map((savedBattle) => {
+            const initial = INITIAL_BATTLES.find((ib) => ib.id === savedBattle.id);
+            if (!initial) return savedBattle;
+
+            const updatedTeams = savedBattle.teams.map((st: Team, idx: number) => {
+              const initTeam = initial.teams.find((it) => it.id === st.id);
+              const isTeam1 = idx === 0 || (initTeam && initTeam.id === initial.teams[0].id);
+              return {
+                ...st,
+                primaryColor: isTeam1 ? '#EF4444' : '#3B82F6',
+                accentColor: isTeam1 ? '#F87171' : '#60A5FA',
+                bgGradient: isTeam1
+                  ? 'from-red-500/25 via-rose-500/10 to-transparent'
+                  : 'from-blue-500/25 via-indigo-500/10 to-transparent',
+                logoUrl: initTeam?.logoUrl || st.logoUrl,
+                slogan: initTeam?.slogan || st.slogan,
+                tag: initTeam?.tag || st.tag,
+                championshipWins: typeof st.championshipWins === 'number' && st.championshipWins > 0
+                  ? st.championshipWins
+                  : (initTeam?.championshipWins || 10),
+                totalBalance: typeof st.totalBalance === 'number' && st.totalBalance > 0 
+                  ? st.totalBalance 
+                  : (initTeam?.totalBalance || 25000)
+              };
+            });
+
             return {
-              ...savedTeam,
-              totalBalance: baseBalance,
-              primaryColor: initial?.primaryColor || (savedTeam.id === 'tacha' ? '#F43F5E' : '#3B82F6'),
-              accentColor: initial?.accentColor || (savedTeam.id === 'tacha' ? '#FDA4AF' : '#60A5FA'),
-              bgGradient: initial?.bgGradient || (savedTeam.id === 'tacha' ? 'from-rose-500/25 via-pink-500/10 to-transparent' : 'from-blue-500/25 via-indigo-500/10 to-transparent'),
-              logoUrl: initial?.logoUrl
+              ...initial,
+              ...savedBattle,
+              teams: updatedTeams as [Team, Team]
             };
           });
         }
       } catch (e) {
-        console.error(e);
+        console.error('Failed to parse saved battles:', e);
       }
     }
-    return INITIAL_TEAMS.map((t) => ({
-      ...t,
-      totalBalance: t.totalBalance > 0 ? t.totalBalance : (t.id === 'tacha' ? 24500 : 23800)
-    }));
+    return INITIAL_BATTLES;
   });
 
-  // Fan Activity Events - populated dynamically by simulation and real gifts
-  const [liveEvents, setLiveEvents] = useState<FanActivityEvent[]>(() => {
+  // Events history per battle
+  const [battleEvents, setBattleEvents] = useState<Record<string, FanActivityEvent[]>>(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.EVENTS);
     if (saved) {
-      try { return JSON.parse(saved); } catch (e) { console.error(e); }
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error('Failed to parse saved battle events:', e);
+      }
     }
-    return [];
+    return {
+      burna_vs_davido: [],
+      ayra_vs_tiwa: [],
+      davido_vs_wizkid: [],
+      nicki_vs_cardi: [],
+      tacha_vs_mercy: []
+    };
   });
 
-  // Automated dynamic updates to pot balance (independent of user inputs)
+  // Save state to localStorage
   useEffect(() => {
-    const NIGERIAN_FAN_NAMES = [
+    localStorage.setItem(STORAGE_KEYS.BATTLES, JSON.stringify(battles));
+  }, [battles]);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.EVENTS, JSON.stringify(battleEvents));
+  }, [battleEvents]);
+
+  // Faux gifting simulation running alongside true gifting action by real users
+  useEffect(() => {
+    const BURNA_DAVIDO_FANS = [
+      'Outsider_Kelechi', 'Giant_Segun', 'Grammy_Boy', 'Odogwu_Vibes', 'Burna_Soldier',
+      '30BG_Tunde', 'OBO_Crew', 'TimelessCrew', 'BaddestFan', 'Fem_Don', 'Adeola_30BG',
+      'CityBoys_Squad', 'Damini_Fan', 'StandStrong_Fan'
+    ];
+
+    const AYRA_TIWA_FANS = [
+      'SabiGirl_Joy', 'Celestial_Blessing', 'Rush_Fanatic', 'Commas_Army', 'StarGirl_Amina',
+      'SavageSoldier_Chioma', 'QueenTiwa_FC', 'SomebodySon_Fan', 'Tiwa_Army', 'NumberOne_Fan',
+      'KeleKele_Love', 'BloodySamaritan_Vibe', 'Loaded_Fan', 'WaterAndGarri_Fan'
+    ];
+
+    const DAVIDO_WIZKID_FANS = [
+      '30BG_Tunde', 'Starboy_Kelechi', 'OBO_Crew', 'WizkidFC_Amina', 
+      'BaddestFan', 'Machala_Vibes', 'Adeola_30BG', 'Starboy_Segun', 
+      '30BG_Folarin', 'Starboy_Zino', 'Fem_Don', 'MadeInLagosFan', 
+      'TimelessCrew', 'EssenceVibe', 'OBO_Squad', 'Starboy_Global'
+    ];
+
+    const NICKI_CARDI_FANS = [
+      'Barbz_Chioma', 'BardiGang_Joy', 'ChunLi_Barb', 'Bodak_Crew', 
+      'Roman_Zolanski', 'Bronx_Bardi', 'PinkFriday_Army', 'Invasion_Fan', 
+      'GagCity_Vibes', 'WAP_Empire', 'SuperBass_Lover', 'Kulture_Fan', 
+      'Barbie_World_Girl', 'Up_Bardi_Squad', 'Queen_Nicki_Army', 'Cardi_Fan_Lagos'
+    ];
+
+    const TACHA_MERCY_FANS = [
       'Titan_Chioma', 'Mercenary_Joy', 'Titan_Blessing', 'Mercenary_Queen',
       'Tunde A.', 'Amina K.', 'Titans_NLNT', 'Emeka E.', 'Lambo_Shield', 
-      'Zainab B.', 'Femi D.', 'Ngozi P.', 'Ibrahim M.', 'Funke Y.', 
-      'Damilola S.', 'Kelechi R.', 'Chioma V.', 'Segun T.', 'Halima U.', 
-      'Babatunde W.', 'Folake M.', 'Uche C.', 'Adeola J.', 'Yusuf G.'
+      'Zainab B.', 'Femi D.', 'Ngozi P.', 'Ibrahim M.', 'Funke Y.'
     ];
 
     let timerId: ReturnType<typeof setTimeout>;
 
     const executeSimulatedGift = () => {
-      setTeams((prevTeams) => {
-        const tacha = prevTeams.find((t) => t.id === 'tacha') || prevTeams[0];
-        const mercy = prevTeams.find((t) => t.id === 'mercy_lambo') || prevTeams[1];
-        if (!tacha || !mercy) return prevTeams;
+      const battleIdx = Math.floor(Math.random() * battles.length);
+      const targetBattle = battles[battleIdx];
+      if (!targetBattle) return;
 
-        // Choose target team with natural close competition
-        let targetId = tacha.id;
-        const diff = tacha.totalBalance - mercy.totalBalance;
-        if (diff > 3500) {
-          targetId = Math.random() < 0.65 ? mercy.id : tacha.id;
-        } else if (diff < -3500) {
-          targetId = Math.random() < 0.65 ? tacha.id : mercy.id;
-        } else {
-          targetId = Math.random() < 0.5 ? tacha.id : mercy.id;
-        }
+      const [team1, team2] = targetBattle.teams;
 
-        // Weighted gift amounts: amounts less than ₦500 are very very rare (less than 2% combined)
-        const rand = Math.random();
-        let amount = 500;
-        if (rand < 0.007) {
-          amount = 100; // ~0.7% - very very rare
-        } else if (rand < 0.02) {
-          amount = 200; // ~1.3% - very very rare
-        } else if (rand < 0.42) {
-          amount = 500; // ~40% - standard baseline
-        } else if (rand < 0.74) {
-          amount = 1000; // ~32% - popular gift
-        } else if (rand < 0.90) {
-          amount = 2000; // ~16% - strong support
-        } else if (rand < 0.97) {
-          amount = 5000; // ~7% - big gift
-        } else if (rand < 0.993) {
-          amount = 10000; // ~2.3% - major drop
-        } else {
-          amount = 20000; // ~0.7% - whale gift
-        }
+      // Choose target team with natural close competition
+      let targetTeamId = team1.id;
+      const diff = team1.totalBalance - team2.totalBalance;
+      if (diff > 4000) {
+        targetTeamId = Math.random() < 0.65 ? team2.id : team1.id;
+      } else if (diff < -4000) {
+        targetTeamId = Math.random() < 0.65 ? team1.id : team2.id;
+      } else {
+        targetTeamId = Math.random() < 0.5 ? team1.id : team2.id;
+      }
 
-        const updated = prevTeams.map((team) => {
-          if (team.id === targetId) {
-            return {
-              ...team,
-              totalBalance: team.totalBalance + amount,
-              fanCount: team.fanCount + 1
-            };
-          }
-          return team;
+      // Weighted gift amounts: amounts < ₦500 are very rare (< 2%)
+      const rand = Math.random();
+      let amount = 500;
+      if (rand < 0.007) {
+        amount = 100;
+      } else if (rand < 0.02) {
+        amount = 200;
+      } else if (rand < 0.42) {
+        amount = 500;
+      } else if (rand < 0.74) {
+        amount = 1000;
+      } else if (rand < 0.90) {
+        amount = 2000;
+      } else if (rand < 0.97) {
+        amount = 5000;
+      } else if (rand < 0.993) {
+        amount = 10000;
+      } else {
+        amount = 20000;
+      }
+
+      // Update team in battle state
+      setBattles((prevBattles) => {
+        return prevBattles.map((b) => {
+          if (b.id !== targetBattle.id) return b;
+          const updatedTeams = b.teams.map((t) => {
+            if (t.id === targetTeamId) {
+              return {
+                ...t,
+                totalBalance: t.totalBalance + amount,
+                fanCount: t.fanCount + 1
+              };
+            }
+            return t;
+          }) as [Team, Team];
+
+          return {
+            ...b,
+            teams: updatedTeams
+          };
         });
-
-        // Record simulated fan activity event for the live ticker
-        const targetTeam = prevTeams.find((t) => t.id === targetId);
-        const fanName = NIGERIAN_FAN_NAMES[Math.floor(Math.random() * NIGERIAN_FAN_NAMES.length)];
-        const newEvt: FanActivityEvent = {
-          id: `evt_sim_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
-          timestamp: Date.now(),
-          fanName: fanName,
-          amount: amount,
-          teamId: targetId,
-          teamName: targetTeam?.name || 'Team',
-          eventType: amount >= 5000 ? 'whale' : 'donation',
-          message: `Gifted ₦${amount.toLocaleString()} to ${targetTeam?.name || 'Team'}`
-        };
-
-        setLiveEvents((prev) => [newEvt, ...prev.slice(0, 39)]);
-
-        return updated;
       });
 
-      // Schedule next dynamic gift tick between 1.5s and 3.5s
-      const delay = 1500 + Math.random() * 2000;
+      // Fan name based on battle
+      let fanList = BURNA_DAVIDO_FANS;
+      if (targetBattle.id === 'ayra_vs_tiwa') {
+        fanList = AYRA_TIWA_FANS;
+      } else if (targetBattle.id === 'davido_vs_wizkid') {
+        fanList = DAVIDO_WIZKID_FANS;
+      } else if (targetBattle.id === 'nicki_vs_cardi') {
+        fanList = NICKI_CARDI_FANS;
+      } else if (targetBattle.id === 'tacha_vs_mercy') {
+        fanList = TACHA_MERCY_FANS;
+      }
+
+      const fanName = fanList[Math.floor(Math.random() * fanList.length)];
+      const targetTeam = targetBattle.teams.find((t) => t.id === targetTeamId);
+
+      const newEvt: FanActivityEvent = {
+        id: `evt_sim_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+        timestamp: Date.now(),
+        fanName: fanName,
+        amount: amount,
+        teamId: targetTeamId,
+        teamName: targetTeam?.name || 'Star',
+        eventType: amount >= 5000 ? 'whale' : 'donation',
+        message: `Gifted ₦${amount.toLocaleString()} to ${targetTeam?.name || 'Star'}`
+      };
+
+      setBattleEvents((prev) => ({
+        ...prev,
+        [targetBattle.id]: [newEvt, ...(prev[targetBattle.id] || []).slice(0, 39)]
+      }));
+
+      // Schedule next simulated gift tick between 1.5s and 3.2s
+      const delay = 1500 + Math.random() * 1700;
       timerId = setTimeout(executeSimulatedGift, delay);
     };
 
-    // First simulated gift triggers quickly (800ms after load)
     timerId = setTimeout(executeSimulatedGift, 800);
 
     return () => {
       clearTimeout(timerId);
     };
-  }, []);
+  }, [battles]);
 
-  // Persistence
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.TEAMS, JSON.stringify(teams));
-  }, [teams]);
-
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.EVENTS, JSON.stringify(liveEvents.slice(0, 40)));
-  }, [liveEvents]);
-
-  // Handle verified user contribution to credit the pot
+  // True gifting action by real users
   const handlePaymentSuccess = (teamId: string, amount: number) => {
     const validAmount = Math.max(100, Math.floor(Number(amount) || 0));
     if (isNaN(validAmount) || validAmount <= 0) return;
 
-    setTeams((prevTeams) => {
-      const updated = prevTeams.map((team) => {
-        if (team.id === teamId) {
-          return {
-            ...team,
-            totalBalance: team.totalBalance + validAmount,
-            fanCount: team.fanCount + 1
-          };
-        }
-        return team;
-      });
+    const activeBattle = battles[currentBattleIndex];
+    if (!activeBattle) return;
 
-      // Re-sort strictly by totalBalance descending
-      const sorted = [...updated].sort((a, b) => b.totalBalance - a.totalBalance);
-      return sorted.map((t, idx) => ({
-        ...t,
-        previousRank: t.currentRank,
-        currentRank: idx + 1
-      }));
+    const targetTeam = activeBattle.teams.find((t) => t.id === teamId);
+
+    // Update real battle balances
+    setBattles((prevBattles) => {
+      return prevBattles.map((b) => {
+        if (b.id !== activeBattle.id) return b;
+        const updatedTeams = b.teams.map((t) => {
+          if (t.id === teamId) {
+            return {
+              ...t,
+              totalBalance: t.totalBalance + validAmount,
+              fanCount: t.fanCount + 1
+            };
+          }
+          return t;
+        }) as [Team, Team];
+
+        return {
+          ...b,
+          teams: updatedTeams
+        };
+      });
     });
 
-    // Record verified user activity event
-    const targetTeam = teams.find((t) => t.id === teamId);
+    // Record verified real user activity event
     const newEvt: FanActivityEvent = {
       id: `evt_real_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
       timestamp: Date.now(),
-      fanName: 'Real Fan',
+      fanName: 'You (Supporter)',
       amount: validAmount,
       teamId: teamId,
-      teamName: targetTeam?.name || 'Team',
+      teamName: targetTeam?.name || 'Star',
       eventType: validAmount >= 5000 ? 'whale' : 'donation',
-      message: `Gifted ₦${validAmount.toLocaleString()} to ${targetTeam?.name || 'Team'}`
+      message: `Verified gift of ₦${validAmount.toLocaleString()} to ${targetTeam?.name || 'Star'}`
     };
 
-    setLiveEvents((prev) => [newEvt, ...prev.slice(0, 39)]);
+    setBattleEvents((prev) => ({
+      ...prev,
+      [activeBattle.id]: [newEvt, ...(prev[activeBattle.id] || []).slice(0, 39)]
+    }));
   };
 
-  const currentSelectedTeam = teams.find((t) => t.id === selectedTeamId);
+  // Swiping navigation
+  const handleSwipeLeft = () => {
+    setCurrentBattleIndex((prev) => (prev + 1) % battles.length);
+  };
+
+  const handleSwipeRight = () => {
+    setCurrentBattleIndex((prev) => (prev - 1 + battles.length) % battles.length);
+  };
+
+  const handleSelectBattle = (index: number) => {
+    if (index >= 0 && index < battles.length) {
+      setCurrentBattleIndex(index);
+    }
+  };
+
+  const activeBattle = battles[currentBattleIndex] || battles[0];
+  const activeEvents = battleEvents[activeBattle.id] || [];
+
+  // Distinct Fandoms data for the Leaderboard (aggregated across battles so each fandom appears once)
+  const fandomMap = new Map<string, FandomLeaderboardItem>();
+
+  battles.forEach((b) => {
+    b.teams.forEach((t) => {
+      const fandomName =
+        t.tag === 'OUTSIDERS' ? 'Outsiders'
+        : t.tag === '30BG' ? '30 Billion Gang'
+        : t.tag === 'SABI GIRLS' ? 'Sabi Girls'
+        : t.tag === 'SAVAGE ARMY' ? 'Savage Army'
+        : t.tag === 'STARBOY' ? 'Starboy FC'
+        : t.tag === 'BARBZ' ? 'Barbz'
+        : t.tag === 'BARDI' ? 'Bardi Gang'
+        : t.tag === 'TITANS' ? 'Titans'
+        : t.tag === 'MERCENARIES' ? 'Mercenaries'
+        : `${t.name} Fandom`;
+
+      const existing = fandomMap.get(t.id);
+      if (existing) {
+        fandomMap.set(t.id, {
+          ...existing,
+          totalBalance: existing.totalBalance + t.totalBalance,
+          championshipWins: Math.max(existing.championshipWins, t.championshipWins),
+          fanCount: existing.fanCount + t.fanCount
+        });
+      } else {
+        fandomMap.set(t.id, {
+          ...t,
+          battleId: b.id,
+          battleTitle: b.title,
+          fandomName
+        });
+      }
+    });
+  });
+
+  const fandoms: FandomLeaderboardItem[] = Array.from(fandomMap.values());
 
   return (
-    <div className="min-h-screen bg-[#06070c] text-white selection:bg-red-500 selection:text-white p-3 sm:p-6 flex flex-col items-center justify-center">
+    <div className="min-h-screen bg-[#06070c] text-white selection:bg-amber-500 selection:text-black p-2.5 sm:p-6 flex flex-col items-center justify-center relative">
+      
+      {/* Top Header Bar: Placed at the top-left above the battle arena so it never obstructs the percentage value */}
+      {!showLeaderboard && (
+        <header className="w-full max-w-[480px] flex items-center justify-between px-1 mb-2.5">
+          <button
+            type="button"
+            onClick={() => setShowLeaderboard(true)}
+            aria-label="View Fandom Leaderboard"
+            className="flex items-center gap-2 bg-[#0b0c16] hover:bg-[#15182a] border border-amber-500/50 hover:border-amber-400 text-amber-400 px-3 py-1.5 rounded-xl shadow-md transition-all cursor-pointer group active:scale-95"
+          >
+            <Trophy className="w-4 h-4 text-amber-400 group-hover:scale-110 transition-transform" />
+            <span className="text-xs font-black tracking-wider text-amber-300">
+              LEADERBOARD
+            </span>
+          </button>
+
+          {/* Quick Battle Navigation Controls */}
+          <div className="flex items-center gap-1.5 bg-[#0b0c16] border border-[#1e2238] px-2 py-1 rounded-xl">
+            <button
+              type="button"
+              onClick={handleSwipeRight}
+              aria-label="Previous Battle"
+              className="text-slate-400 hover:text-white p-0.5 transition-colors cursor-pointer"
+            >
+              <ChevronLeft className="w-3.5 h-3.5" />
+            </button>
+            <span className="text-[11px] font-bold text-slate-300 tracking-wider uppercase px-1">
+              {currentBattleIndex + 1} / {battles.length}
+            </span>
+            <button
+              type="button"
+              onClick={handleSwipeLeft}
+              aria-label="Next Battle"
+              className="text-slate-400 hover:text-white p-0.5 transition-colors cursor-pointer"
+            >
+              <ChevronRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </header>
+      )}
+
       <main className="w-full flex justify-center">
-        <PvPBattleDashboard
-          teams={teams}
-          onPaymentSuccess={handlePaymentSuccess}
-          recentEvents={liveEvents}
-        />
+        {showLeaderboard ? (
+          <LeaderboardView
+            fandoms={fandoms}
+            onBack={() => setShowLeaderboard(false)}
+            onSelectBattle={(battleId) => {
+              const idx = battles.findIndex((b) => b.id === battleId);
+              if (idx !== -1) {
+                setCurrentBattleIndex(idx);
+              }
+              setShowLeaderboard(false);
+            }}
+          />
+        ) : (
+          <PvPBattleDashboard
+            key={activeBattle.id}
+            battleId={activeBattle.id}
+            battleTitle={activeBattle.title}
+            battleSubtitle={activeBattle.subtitle}
+            battleCategory={activeBattle.category}
+            teams={activeBattle.teams}
+            onPaymentSuccess={handlePaymentSuccess}
+            recentEvents={activeEvents}
+            currentIndex={currentBattleIndex}
+            totalBattles={battles.length}
+            onSwipeLeft={handleSwipeLeft}
+            onSwipeRight={handleSwipeRight}
+            onSelectBattle={handleSelectBattle}
+          />
+        )}
       </main>
     </div>
   );

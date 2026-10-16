@@ -1,107 +1,137 @@
 import React from 'react';
-import { Gift } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { Team } from '../types/game';
-import { TeamLogo } from './TeamLogo';
+
+export interface FandomLeaderboardItem extends Team {
+  fandomName: string;
+  battleId: string;
+  battleTitle: string;
+}
 
 interface LeaderboardViewProps {
-  teams: Team[];
-  onSelectTeam: (team: Team) => void;
+  fandoms: FandomLeaderboardItem[];
+  onBack: () => void;
+  onSelectBattle: (battleId: string) => void;
 }
 
 export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
-  teams,
-  onSelectTeam
+  fandoms,
+  onBack,
+  onSelectBattle
 }) => {
-  // Sort teams strictly by totalBalance descending
-  const sortedTeams = [...teams].sort((a, b) => b.totalBalance - a.totalBalance);
-  const totalLeaguePot = sortedTeams.reduce((sum, t) => sum + t.totalBalance, 0);
+  // Ranking is based strictly on gifts received (descending)
+  const sortedRows = [...fandoms]
+    .map((f) => ({
+      ...f,
+      gifts: f.totalBalance || 0
+    }))
+    .sort((a, b) => b.gifts - a.gifts);
 
   return (
-    <div className="w-full max-w-4xl mr-auto ml-0 pt-0 space-y-4 font-cursive text-amber-300 animate-fadeIn uppercase">
-      {/* Header Total Pot */}
-      <div className="flex flex-col items-start justify-start text-left">
-        <div className="text-sm sm:text-base font-bold text-amber-400 tracking-wider">
-          TOTAL POT: ₦{totalLeaguePot.toLocaleString()}
-        </div>
+    <div className="w-full max-w-[500px] mx-auto font-sans select-none animate-fadeIn pb-8 px-1">
+      
+      {/* Top Bar with Back Navigation */}
+      <div className="flex items-center justify-between py-2 mb-2">
+        <button
+          type="button"
+          onClick={onBack}
+          aria-label="Back to Battle"
+          className="flex items-center gap-1.5 text-xs font-semibold text-slate-300 hover:text-white bg-[#0f111e] hover:bg-[#1a1d30] border border-[#232742] px-3.5 py-1.5 rounded-full transition-all cursor-pointer active:scale-95 shadow-sm"
+        >
+          <ArrowLeft className="w-3.5 h-3.5 text-slate-300" />
+          <span>Back to Battle</span>
+        </button>
+
+        <span className="text-[11px] font-bold text-slate-400 tracking-wider uppercase">
+          Live Fandom Standings
+        </span>
       </div>
 
-      {/* Pot Distribution Momentum Bar */}
-      <div className="bg-slate-50 border border-amber-500/40 rounded-2xl p-4 shadow-xl space-y-2">
-        <div className="flex justify-between items-center text-xs sm:text-sm font-bold text-amber-700 tracking-wider">
-          {sortedTeams.map((team) => {
-            const pct = totalLeaguePot > 0 ? Math.round((team.totalBalance / totalLeaguePot) * 100) : 25;
-            return (
-              <span key={team.id}>
-                {team.tag} {pct}%
-              </span>
-            );
-          })}
-        </div>
-        <div className="w-full h-3.5 bg-slate-200 rounded-full overflow-hidden flex border border-amber-500/40 p-0.5 shadow-inner">
-          {sortedTeams.map((team) => {
-            const pct = totalLeaguePot > 0 ? (team.totalBalance / totalLeaguePot) * 100 : 25;
-            return (
-              <div
-                key={team.id}
-                className="h-full transition-all duration-700 first:rounded-l-full last:rounded-r-full"
-                style={{
-                  width: `${pct}%`,
-                  backgroundColor: team.primaryColor || '#D97706'
-                }}
-              />
-            );
-          })}
-        </div>
-      </div>
+      {/* Main Standings Table Container */}
+      <div className="bg-[#0b0c16] border border-[#1e2238] rounded-2xl shadow-2xl overflow-hidden">
+        
+        <table className="w-full text-left border-collapse">
+          <thead>
+            <tr className="border-b border-[#1a1d30] text-[11px] font-semibold text-slate-400 uppercase tracking-wider bg-[#0a0b14]">
+              <th scope="col" className="py-3.5 pl-4 pr-2 text-left font-normal">
+                Rank
+              </th>
+              <th
+                scope="col"
+                className="py-3.5 pl-2 pr-4 text-right font-normal text-slate-300"
+              >
+                Gifts Received
+              </th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-[#151829] text-xs">
+            {sortedRows.map((row, index) => {
+              const rank = index + 1;
+              const isTopRanked = rank <= 3;
 
-      {/* Leaderboard Cards List */}
-      <div className="space-y-3.5">
-        {sortedTeams.map((team, index) => {
-          const rank = index + 1;
-          const isTop = rank === 1;
-
-          return (
-            <div
-              key={team.id}
-              onClick={() => onSelectTeam(team)}
-              className={`bg-slate-50 border ${
-                isTop
-                  ? 'border-amber-500 shadow-xl shadow-amber-500/10 bg-gradient-to-r from-amber-50/50 via-amber-100/30 to-amber-505/50'
-                  : 'border-slate-200 hover:border-amber-400 shadow-sm'
-              } rounded-2xl p-4 sm:p-5 flex items-center justify-between gap-3 sm:gap-4 transition-all duration-200 hover:scale-[1.01] cursor-pointer group relative overflow-hidden`}
-            >
-              {/* Left: Team Logo & Tag */}
-              <div className="flex items-center gap-3 sm:gap-4 min-w-0">
-                <TeamLogo team={team} size="md" />
-                <span className="text-sm sm:text-base font-black uppercase tracking-wider bg-slate-200 px-2.5 py-1 rounded-lg border border-amber-500/40 text-slate-800">
-                  {team.tag}
-                </span>
-              </div>
-
-              {/* Right: Balance & Gift Button */}
-              <div className="flex items-center gap-3 sm:gap-5 shrink-0">
-                {/* Balance */}
-                <div className="text-right">
-                  <div className="text-xl sm:text-2xl md:text-3xl font-black text-amber-700 drop-shadow tabular-nums">
-                    ₦{team.totalBalance.toLocaleString()}
-                  </div>
-                </div>
-
-                {/* Gift Button (Gift Icon Only as previously requested) */}
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onSelectTeam(team);
-                  }}
-                  aria-label={`Gift ${team.name}`}
-                  className="py-3 px-3.5 sm:px-4 bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-500 text-slate-950 hover:brightness-110 active:scale-95 font-bold rounded-xl flex items-center justify-center shadow-lg shadow-amber-500/25 transition-all cursor-pointer shrink-0"
+              return (
+                <tr
+                  key={`fandom_${row.id}`}
+                  onClick={() => onSelectBattle(row.battleId)}
+                  className="hover:bg-[#131627] transition-colors cursor-pointer group"
                 >
-                  <Gift className="w-5 h-5 text-slate-950" />
-                </button>
-              </div>
-            </div>
-          );
-        })}
+                  {/* Rank & Fandom Info with Logo */}
+                  <td className="py-3.5 pl-3 pr-2">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      {/* Rank Number with subtle left qualification stripe */}
+                      <div className="relative pl-2.5 flex items-center justify-center min-w-[22px]">
+                        {isTopRanked && (
+                          <span className="absolute left-0 top-1 bottom-1 w-1 rounded-full bg-blue-500" />
+                        )}
+                        <span className="text-xs sm:text-sm font-bold text-slate-300 group-hover:text-white tabular-nums">
+                          {rank}
+                        </span>
+                      </div>
+
+                      {/* Fandom Avatar */}
+                      <img
+                        src={row.logoUrl}
+                        alt={row.name}
+                        referrerPolicy="no-referrer"
+                        className="w-8 h-8 rounded-full object-cover border border-[#232742] shadow-sm flex-shrink-0"
+                      />
+
+                      {/* Fandom and Star Name */}
+                      <div className="min-w-0">
+                        <span className="text-xs sm:text-sm font-semibold text-white truncate block group-hover:text-amber-300 transition-colors">
+                          {row.fandomName}
+                        </span>
+                        <span className="text-[10px] text-slate-400 truncate block">
+                          {row.name}
+                        </span>
+                      </div>
+                    </div>
+                  </td>
+
+                  {/* Gifts Received */}
+                  <td className="py-3.5 pl-2 pr-4 text-right font-extrabold text-amber-300 text-sm sm:text-base tabular-nums">
+                    ₦{row.gifts.toLocaleString()}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+
+        {/* Footer Link to return to Battle */}
+        <div className="p-3 bg-[#0a0b14] border-t border-[#1a1d30] flex flex-col items-center gap-1.5">
+          <button
+            type="button"
+            onClick={onBack}
+            className="w-full py-2 px-4 rounded-full bg-[#141628] hover:bg-[#1e223b] border border-[#252a48] text-xs font-semibold text-slate-200 hover:text-white transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-sm active:scale-98"
+          >
+            <span>Back to Battle Arena</span>
+          </button>
+          <span className="text-[10px] text-slate-500">
+            Tap any fandom to jump to their live battle
+          </span>
+        </div>
+
       </div>
     </div>
   );
