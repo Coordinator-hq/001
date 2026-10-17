@@ -792,7 +792,7 @@ const NIGERIAN_FAN_NAMES = [
 let serverGiftTimer: NodeJS.Timeout | null = null;
 
 function scheduleServerGiftTick() {
-  const nextDelay = 400 + Math.random() * 600;
+  const nextDelay = 1500 + Math.random() * 2000;
   serverGiftTimer = setTimeout(() => {
     try {
       // Pick an active match randomly

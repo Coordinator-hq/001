@@ -6,23 +6,42 @@
 export const GMT1_OFFSET_HOURS = 1;
 export const GMT1_OFFSET_MS = GMT1_OFFSET_HOURS * 60 * 60 * 1000;
 
+/**
+ * Returns remaining seconds until the next 00:00:00 GMT+1.
+ * Automatically wraps / resets every 24 hours.
+ */
 export function getGmt1CountdownSeconds(): number {
-  const now = new Date();
-  const nowUtc = now.getTime() + now.getTimezoneOffset() * 60 * 1000;
-  const nowGmt1 = new Date(nowUtc + GMT1_OFFSET_MS);
+  const now = Date.now();
+  // Current time in GMT+1
+  const gmt1Date = new Date(now + GMT1_OFFSET_MS);
 
-  const endOfGmt1Day = new Date(nowGmt1);
-  endOfGmt1Day.setHours(24, 0, 0, 0);
+  // Midnight of next day in GMT+1
+  const nextMidnightUtc = Date.UTC(
+    gmt1Date.getUTCFullYear(),
+    gmt1Date.getUTCMonth(),
+    gmt1Date.getUTCDate() + 1,
+    0,
+    0,
+    0,
+    0
+  );
 
-  const diffMs = endOfGmt1Day.getTime() - nowGmt1.getTime();
-  return Math.max(0, Math.floor(diffMs / 1000));
+  const diffMs = nextMidnightUtc - (now + GMT1_OFFSET_MS);
+  const remainingSeconds = Math.max(0, Math.floor(diffMs / 1000));
+  return remainingSeconds > 0 ? remainingSeconds : 86400;
 }
 
+/**
+ * Formats total seconds into standard HH:MM:SS format
+ */
 export function formatCountdownTime(totalSeconds: number): string {
   const hours = Math.floor(totalSeconds / 3600);
   const minutes = Math.floor((totalSeconds % 3600) / 60);
   const seconds = totalSeconds % 60;
 
-  const pad = (n: number) => n.toString().padStart(2, '0');
-  return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
+  const hh = String(hours).padStart(2, '0');
+  const mm = String(minutes).padStart(2, '0');
+  const ss = String(seconds).padStart(2, '0');
+
+  return `${hh}:${mm}:${ss}`;
 }

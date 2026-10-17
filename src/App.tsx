@@ -222,12 +222,12 @@ export default function App() {
         [targetBattle.id]: [newEvt, ...(prev[targetBattle.id] || []).slice(0, 39)]
       }));
 
-      // Schedule next simulated gift tick between 0.4s and 1.0s
-      const delay = 400 + Math.random() * 600;
+      // Schedule next simulated gift tick between 1.5s and 3.2s
+      const delay = 1500 + Math.random() * 1700;
       timerId = setTimeout(executeSimulatedGift, delay);
     };
 
-    timerId = setTimeout(executeSimulatedGift, 300);
+    timerId = setTimeout(executeSimulatedGift, 800);
 
     return () => {
       clearTimeout(timerId);

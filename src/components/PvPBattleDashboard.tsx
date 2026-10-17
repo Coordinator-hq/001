@@ -19,8 +19,6 @@ interface PvPBattleDashboardProps {
   onSwipeLeft: () => void;
   onSwipeRight: () => void;
   onSelectBattle?: (index: number) => void;
-  onMouseEnter?: () => void;
-  onMouseLeave?: () => void;
 }
 
 export const PvPBattleDashboard: React.FC<PvPBattleDashboardProps> = ({
@@ -28,25 +26,24 @@ export const PvPBattleDashboard: React.FC<PvPBattleDashboardProps> = ({
   onPaymentSuccess,
   recentEvents,
   onSwipeLeft,
-  onSwipeRight,
-  onMouseEnter,
-  onMouseLeave
+  onSwipeRight
 }) => {
   const team1 = teams[0];
   const team2 = teams[1];
 
   // Strict Red and Blue theme for every battle:
+  // Team 1 (Left) is RED, Team 2 (Right) is BLUE
   const RED_COLOR = '#EF4444';
   const BLUE_COLOR = '#3B82F6';
 
   const totalPot = (team1?.totalBalance || 0) + (team2?.totalBalance || 0);
 
-  // Dynamic percentage calculation
+  // Dynamic percentage calculation (defaults to 50/50 when pot is zero)
   const hasPot = totalPot > 0;
   const team1Pct = hasPot ? Math.round((team1.totalBalance / totalPot) * 100) : 50;
   const team2Pct = hasPot ? 100 - team1Pct : 50;
 
-  // 24-Hour Countdown Timer
+  // 24-Hour Battle Countdown Timer (Resets every 24 hours at 00:00:00 GMT+1)
   const [timeLeft, setTimeLeft] = useState<number>(() => getGmt1CountdownSeconds());
 
   useEffect(() => {
@@ -59,9 +56,10 @@ export const PvPBattleDashboard: React.FC<PvPBattleDashboardProps> = ({
 
   const timerDisplay = formatCountdownTime(timeLeft);
 
-  // Selected team to gift to
+  // Selected team/star to gift to (defaults to team1)
   const [selectedTeamId, setSelectedTeamId] = useState<string>(team1.id);
 
+  // Synchronize selected team when switching battles
   useEffect(() => {
     if (selectedTeamId !== team1.id && selectedTeamId !== team2.id) {
       setSelectedTeamId(team1.id);
@@ -78,6 +76,9 @@ export const PvPBattleDashboard: React.FC<PvPBattleDashboardProps> = ({
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [successNotice, setSuccessNotice] = useState<string | null>(null);
 
+  // 8 Preset Denominations:
+  // Row 1: ₦100, ₦200, ₦500, ₦1,000
+  // Row 2: ₦2,000, ₦5,000, ₦10,000, ₦20,000
   const presetAmounts = [100, 200, 500, 1000, 2000, 5000, 10000, 20000];
 
   const handleSelectPreset = (val: number) => {
@@ -141,6 +142,7 @@ export const PvPBattleDashboard: React.FC<PvPBattleDashboardProps> = ({
     const deltaX = e.changedTouches[0].clientX - touchStartX.current;
     const deltaY = e.changedTouches[0].clientY - touchStartY.current;
 
+    // Detect horizontal swipe (horizontal movement > vertical movement and threshold > 45px)
     if (Math.abs(deltaX) > 45 && Math.abs(deltaX) > Math.abs(deltaY)) {
       if (deltaX < 0) {
         onSwipeLeft();
@@ -156,9 +158,7 @@ export const PvPBattleDashboard: React.FC<PvPBattleDashboardProps> = ({
     <div
       onTouchStart={onTouchStart}
       onTouchEnd={onTouchEnd}
-      onMouseEnter={onMouseEnter}
-      onMouseLeave={onMouseLeave}
-      className="w-full max-w-[480px] mx-auto space-y-4 font-sans select-none animate-slideIn pb-6"
+      className="w-full max-w-[480px] mx-auto space-y-4 font-sans select-none animate-fadeIn pb-6"
     >
       {/* Success Notification Alert */}
       {successNotice && (
@@ -193,8 +193,10 @@ export const PvPBattleDashboard: React.FC<PvPBattleDashboardProps> = ({
               ₦{totalPot.toLocaleString()}
             </span>
             
-            {/* Clean Countdown Timer */}
-            <div className="flex items-center gap-1.5 mt-1 text-[11px] font-mono text-slate-200 bg-slate-900/90 border border-slate-700/60 px-2.5 py-0.5 rounded-full shadow-md">
+            {/* Clean Countdown Timer (without "24H" or "GMT+1") */}
+            <div
+              className="flex items-center gap-1.5 mt-1 text-[11px] font-mono text-slate-200 bg-slate-900/90 border border-slate-700/60 px-2.5 py-0.5 rounded-full shadow-md"
+            >
               <Timer className="w-3 h-3 text-amber-400 animate-pulse" />
               <span className="tabular-nums font-bold tracking-wider text-slate-100">
                 {timerDisplay}
@@ -217,6 +219,7 @@ export const PvPBattleDashboard: React.FC<PvPBattleDashboardProps> = ({
 
         {/* Dynamic Dual-Color Percentage Bar (Strictly Red and Blue) */}
         <div className="w-full h-3.5 sm:h-4 bg-[#141628] rounded-full overflow-hidden flex border border-[#232742] p-0.5 shadow-inner">
+          {/* Team 1 Left Portion (Red) */}
           <div
             className="h-full rounded-l-full transition-all duration-700"
             style={{
@@ -225,6 +228,7 @@ export const PvPBattleDashboard: React.FC<PvPBattleDashboardProps> = ({
               boxShadow: '0 0 14px rgba(239, 68, 68, 0.6)'
             }}
           />
+          {/* Team 2 Right Portion (Blue) */}
           <div
             className="h-full rounded-r-full transition-all duration-700"
             style={{
@@ -235,7 +239,7 @@ export const PvPBattleDashboard: React.FC<PvPBattleDashboardProps> = ({
           />
         </div>
 
-        {/* Dynamic Live Balance Sub-bar */}
+        {/* Dynamic Live Balance Sub-bar (Strictly Red on Left, Blue on Right) */}
         <div className="flex justify-between items-center text-[11px] font-bold text-slate-400 mt-2 px-1">
           <span
             className="tabular-nums font-extrabold"
@@ -301,8 +305,10 @@ export const PvPBattleDashboard: React.FC<PvPBattleDashboardProps> = ({
               referrerPolicy="no-referrer"
               className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300"
             />
+            {/* Vignette Gradient Overlay */}
             <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/25 to-transparent pointer-events-none" />
 
+            {/* Bottom Name Label */}
             <div className="absolute bottom-2 sm:bottom-2.5 inset-x-0 text-center pointer-events-none px-1">
               <span className="text-base sm:text-lg font-black text-white tracking-wide drop-shadow-md block leading-tight">
                 {team1.name}
@@ -312,6 +318,7 @@ export const PvPBattleDashboard: React.FC<PvPBattleDashboardProps> = ({
               </span>
             </div>
 
+            {/* Active Red Indicator */}
             {isTeam1 && (
               <div
                 className="absolute top-2 left-2 w-2 h-2 rounded-full"
@@ -351,8 +358,10 @@ export const PvPBattleDashboard: React.FC<PvPBattleDashboardProps> = ({
               referrerPolicy="no-referrer"
               className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300"
             />
+            {/* Vignette Gradient Overlay */}
             <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/25 to-transparent pointer-events-none" />
 
+            {/* Bottom Name Label */}
             <div className="absolute bottom-2 sm:bottom-2.5 inset-x-0 text-center pointer-events-none px-1">
               <span className="text-base sm:text-lg font-black text-white tracking-wide drop-shadow-md block leading-tight">
                 {team2.name}
@@ -362,6 +371,7 @@ export const PvPBattleDashboard: React.FC<PvPBattleDashboardProps> = ({
               </span>
             </div>
 
+            {/* Active Blue Indicator */}
             {!isTeam1 && (
               <div
                 className="absolute top-2 right-2 w-2 h-2 rounded-full"
@@ -372,19 +382,21 @@ export const PvPBattleDashboard: React.FC<PvPBattleDashboardProps> = ({
               />
             )}
           </button>
-        </div>
 
+        </div>
       </div>
 
-      {/* CARD 2: Interactive Gifting Stations */}
-      <div className="bg-[#0b0c16] border border-[#1e2238] rounded-[28px] p-4 sm:p-5 shadow-2xl space-y-4">
+      {/* CARD 2: Gifting Denominations, Custom Amount & Dynamic Readout */}
+      <div className="bg-[#0b0c16] border border-[#1e2238] rounded-[28px] p-4 sm:p-5 shadow-2xl relative overflow-hidden space-y-4">
         
-        {/* Card Header with Active Star */}
-        <div className="flex items-center justify-between px-1">
-          <span className="text-xs sm:text-sm font-bold text-white tracking-wide">
-            Choose Amount
-          </span>
-          <div className="flex items-center gap-1.5 text-xs">
+        {/* Title */}
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg sm:text-xl font-bold tracking-tight text-white">
+            Choose <span className="text-slate-300">Amount</span>
+          </h2>
+
+          {/* Active target badge */}
+          <div className="flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full bg-[#121424] border border-[#232742]">
             <span
               className="w-2 h-2 rounded-full inline-block"
               style={{ backgroundColor: activeColor }}
@@ -434,6 +446,7 @@ export const PvPBattleDashboard: React.FC<PvPBattleDashboardProps> = ({
         {/* Custom Amount Input & Glowing Gift Button */}
         <div className="flex items-center gap-2.5 sm:gap-3">
           
+          {/* Custom Amount Input with Double-Stroked Naira Symbol */}
           <div
             className="flex-1 relative flex items-center bg-[#121424] border border-[#232742] rounded-xl px-3.5 sm:px-4 py-3 sm:py-3.5 transition-all"
             style={{
@@ -452,6 +465,7 @@ export const PvPBattleDashboard: React.FC<PvPBattleDashboardProps> = ({
             />
           </div>
 
+          {/* Gifting Button with Glowing Box (Red or Blue) */}
           <button
             type="button"
             disabled={isProcessing}
@@ -471,7 +485,7 @@ export const PvPBattleDashboard: React.FC<PvPBattleDashboardProps> = ({
           </button>
         </div>
 
-        {/* Dynamic Readout */}
+        {/* Dynamic Readout of the Amount Being Gifted */}
         <div className="flex items-center justify-between px-3 py-2 rounded-xl bg-[#121424] border border-[#232742] text-xs font-semibold">
           <span className="text-slate-400">
             Dynamic Readout:
