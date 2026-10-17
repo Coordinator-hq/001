@@ -3,87 +3,127 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Trophy, ChevronLeft, ChevronRight } from 'lucide-react';
 import { PvPBattleDashboard } from './components/PvPBattleDashboard';
 import { LeaderboardView, FandomLeaderboardItem } from './components/LeaderboardView';
 import { Team, FanActivityEvent } from './types/game';
 import { INITIAL_BATTLES } from './data/initialLeagueData';
+import {
+  BattleItem,
+  simulateBatchGifts,
+  calculateElapsedCatchUp,
+  SIMULATION_AVG_INTERVAL_MS
+} from './utils/simulation';
 
 const STORAGE_KEYS = {
   BATTLES: 'fanbrawl_battles_burna_ayra_v3',
-  EVENTS: 'fanbrawl_events_burna_ayra_v3'
+  EVENTS: 'fanbrawl_events_burna_ayra_v3',
+  LAST_SIM_TIME: 'fanbrawl_last_sim_timestamp'
 };
+
+// Helper to load and catch up initial state from localStorage
+function getInitialBattlesAndEvents(): {
+  battles: BattleItem[];
+  events: Record<string, FanActivityEvent[]>;
+} {
+  let loadedBattles: BattleItem[] = INITIAL_BATTLES;
+  let loadedEvents: Record<string, FanActivityEvent[]> = {
+    burna_vs_davido: [],
+    ayra_vs_tiwa: [],
+    davido_vs_wizkid: [],
+    nicki_vs_cardi: [],
+    tacha_vs_mercy: []
+  };
+
+  const savedBattles = localStorage.getItem(STORAGE_KEYS.BATTLES);
+  if (savedBattles) {
+    try {
+      const parsed = JSON.parse(savedBattles);
+      if (Array.isArray(parsed) && parsed.length >= 5) {
+        loadedBattles = parsed.map((savedBattle) => {
+          const initial = INITIAL_BATTLES.find((ib) => ib.id === savedBattle.id);
+          if (!initial) return savedBattle;
+
+          const updatedTeams = savedBattle.teams.map((st: Team, idx: number) => {
+            const initTeam = initial.teams.find((it) => it.id === st.id);
+            const isTeam1 = idx === 0 || (initTeam && initTeam.id === initial.teams[0].id);
+            return {
+              ...st,
+              primaryColor: isTeam1 ? '#EF4444' : '#3B82F6',
+              accentColor: isTeam1 ? '#F87171' : '#60A5FA',
+              bgGradient: isTeam1
+                ? 'from-red-500/25 via-rose-500/10 to-transparent'
+                : 'from-blue-500/25 via-indigo-500/10 to-transparent',
+              logoUrl: initTeam?.logoUrl || st.logoUrl,
+              slogan: initTeam?.slogan || st.slogan,
+              tag: initTeam?.tag || st.tag,
+              championshipWins: typeof st.championshipWins === 'number' && st.championshipWins > 0
+                ? st.championshipWins
+                : (initTeam?.championshipWins || 10),
+              totalBalance: typeof st.totalBalance === 'number' && st.totalBalance > 0 
+                ? st.totalBalance 
+                : (initTeam?.totalBalance || 25000)
+            };
+          });
+
+          return {
+            ...initial,
+            ...savedBattle,
+            teams: updatedTeams as [Team, Team]
+          };
+        });
+      }
+    } catch (e) {
+      console.error('Failed to parse saved battles:', e);
+    }
+  }
+
+  const savedEvents = localStorage.getItem(STORAGE_KEYS.EVENTS);
+  if (savedEvents) {
+    try {
+      loadedEvents = { ...loadedEvents, ...JSON.parse(savedEvents) };
+    } catch (e) {
+      console.error('Failed to parse saved battle events:', e);
+    }
+  }
+
+  // Catch up simulated gifts for time elapsed while page was closed/offline
+  const lastTimeStr = localStorage.getItem(STORAGE_KEYS.LAST_SIM_TIME);
+  if (lastTimeStr) {
+    const lastTimestamp = parseInt(lastTimeStr, 10);
+    if (!isNaN(lastTimestamp) && lastTimestamp > 0) {
+      const catchUp = calculateElapsedCatchUp(loadedBattles, loadedEvents, lastTimestamp);
+      loadedBattles = catchUp.updatedBattles;
+      loadedEvents = catchUp.updatedEvents;
+    }
+  }
+
+  // Record current timestamp
+  localStorage.setItem(STORAGE_KEYS.LAST_SIM_TIME, Date.now().toString());
+
+  return {
+    battles: loadedBattles,
+    events: loadedEvents
+  };
+}
 
 export default function App() {
   const [currentBattleIndex, setCurrentBattleIndex] = useState<number>(0);
   const [showLeaderboard, setShowLeaderboard] = useState<boolean>(false);
 
-  // Battles State (Burna vs Davido, Ayra vs Tiwa, Davido vs Wizkid, Nicki vs Cardi, Tacha vs Mercy)
-  const [battles, setBattles] = useState(() => {
-    const saved = localStorage.getItem(STORAGE_KEYS.BATTLES);
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length >= 5) {
-          return parsed.map((savedBattle) => {
-            const initial = INITIAL_BATTLES.find((ib) => ib.id === savedBattle.id);
-            if (!initial) return savedBattle;
+  // Initialize state with catch-up applied
+  const [initialData] = useState(() => getInitialBattlesAndEvents());
+  const [battles, setBattles] = useState<BattleItem[]>(initialData.battles);
+  const [battleEvents, setBattleEvents] = useState<Record<string, FanActivityEvent[]>>(initialData.events);
 
-            const updatedTeams = savedBattle.teams.map((st: Team, idx: number) => {
-              const initTeam = initial.teams.find((it) => it.id === st.id);
-              const isTeam1 = idx === 0 || (initTeam && initTeam.id === initial.teams[0].id);
-              return {
-                ...st,
-                primaryColor: isTeam1 ? '#EF4444' : '#3B82F6',
-                accentColor: isTeam1 ? '#F87171' : '#60A5FA',
-                bgGradient: isTeam1
-                  ? 'from-red-500/25 via-rose-500/10 to-transparent'
-                  : 'from-blue-500/25 via-indigo-500/10 to-transparent',
-                logoUrl: initTeam?.logoUrl || st.logoUrl,
-                slogan: initTeam?.slogan || st.slogan,
-                tag: initTeam?.tag || st.tag,
-                championshipWins: typeof st.championshipWins === 'number' && st.championshipWins > 0
-                  ? st.championshipWins
-                  : (initTeam?.championshipWins || 10),
-                totalBalance: typeof st.totalBalance === 'number' && st.totalBalance > 0 
-                  ? st.totalBalance 
-                  : (initTeam?.totalBalance || 25000)
-              };
-            });
+  const battlesRef = useRef(battles);
+  battlesRef.current = battles;
 
-            return {
-              ...initial,
-              ...savedBattle,
-              teams: updatedTeams as [Team, Team]
-            };
-          });
-        }
-      } catch (e) {
-        console.error('Failed to parse saved battles:', e);
-      }
-    }
-    return INITIAL_BATTLES;
-  });
+  const eventsRef = useRef(battleEvents);
+  eventsRef.current = battleEvents;
 
-  // Events history per battle
-  const [battleEvents, setBattleEvents] = useState<Record<string, FanActivityEvent[]>>(() => {
-    const saved = localStorage.getItem(STORAGE_KEYS.EVENTS);
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch (e) {
-        console.error('Failed to parse saved battle events:', e);
-      }
-    }
-    return {
-      burna_vs_davido: [],
-      ayra_vs_tiwa: [],
-      davido_vs_wizkid: [],
-      nicki_vs_cardi: [],
-      tacha_vs_mercy: []
-    };
-  });
+  const lastTickTimeRef = useRef<number>(Date.now());
 
   // Save state to localStorage
   useEffect(() => {
@@ -94,145 +134,67 @@ export default function App() {
     localStorage.setItem(STORAGE_KEYS.EVENTS, JSON.stringify(battleEvents));
   }, [battleEvents]);
 
-  // Faux gifting simulation running alongside true gifting action by real users
+  // Faster simulated gifting loop & catch-up when returning to the tab
   useEffect(() => {
-    const BURNA_DAVIDO_FANS = [
-      'Outsider_Kelechi', 'Giant_Segun', 'Grammy_Boy', 'Odogwu_Vibes', 'Burna_Soldier',
-      '30BG_Tunde', 'OBO_Crew', 'TimelessCrew', 'BaddestFan', 'Fem_Don', 'Adeola_30BG',
-      'CityBoys_Squad', 'Damini_Fan', 'StandStrong_Fan'
-    ];
-
-    const AYRA_TIWA_FANS = [
-      'SabiGirl_Joy', 'Celestial_Blessing', 'Rush_Fanatic', 'Commas_Army', 'StarGirl_Amina',
-      'SavageSoldier_Chioma', 'QueenTiwa_FC', 'SomebodySon_Fan', 'Tiwa_Army', 'NumberOne_Fan',
-      'KeleKele_Love', 'BloodySamaritan_Vibe', 'Loaded_Fan', 'WaterAndGarri_Fan'
-    ];
-
-    const DAVIDO_WIZKID_FANS = [
-      '30BG_Tunde', 'Starboy_Kelechi', 'OBO_Crew', 'WizkidFC_Amina', 
-      'BaddestFan', 'Machala_Vibes', 'Adeola_30BG', 'Starboy_Segun', 
-      '30BG_Folarin', 'Starboy_Zino', 'Fem_Don', 'MadeInLagosFan', 
-      'TimelessCrew', 'EssenceVibe', 'OBO_Squad', 'Starboy_Global'
-    ];
-
-    const NICKI_CARDI_FANS = [
-      'Barbz_Chioma', 'BardiGang_Joy', 'ChunLi_Barb', 'Bodak_Crew', 
-      'Roman_Zolanski', 'Bronx_Bardi', 'PinkFriday_Army', 'Invasion_Fan', 
-      'GagCity_Vibes', 'WAP_Empire', 'SuperBass_Lover', 'Kulture_Fan', 
-      'Barbie_World_Girl', 'Up_Bardi_Squad', 'Queen_Nicki_Army', 'Cardi_Fan_Lagos'
-    ];
-
-    const TACHA_MERCY_FANS = [
-      'Titan_Chioma', 'Mercenary_Joy', 'Titan_Blessing', 'Mercenary_Queen',
-      'Tunde A.', 'Amina K.', 'Titans_NLNT', 'Emeka E.', 'Lambo_Shield', 
-      'Zainab B.', 'Femi D.', 'Ngozi P.', 'Ibrahim M.', 'Funke Y.'
-    ];
-
     let timerId: ReturnType<typeof setTimeout>;
 
-    const executeSimulatedGift = () => {
-      const battleIdx = Math.floor(Math.random() * battles.length);
-      const targetBattle = battles[battleIdx];
-      if (!targetBattle) return;
+    const runSimulationStep = () => {
+      const now = Date.now();
+      const elapsedSinceLastTick = now - lastTickTimeRef.current;
+      lastTickTimeRef.current = now;
+      localStorage.setItem(STORAGE_KEYS.LAST_SIM_TIME, now.toString());
 
-      const [team1, team2] = targetBattle.teams;
+      // If browser was backgrounded/throttled (> 800ms passed), batch calculate gifts
+      // Otherwise perform a single rapid gift
+      const giftsToProcess = elapsedSinceLastTick > 800
+        ? Math.min(Math.floor(elapsedSinceLastTick / SIMULATION_AVG_INTERVAL_MS), 60)
+        : 1;
 
-      // Choose target team with natural close competition
-      let targetTeamId = team1.id;
-      const diff = team1.totalBalance - team2.totalBalance;
-      if (diff > 4000) {
-        targetTeamId = Math.random() < 0.65 ? team2.id : team1.id;
-      } else if (diff < -4000) {
-        targetTeamId = Math.random() < 0.65 ? team1.id : team2.id;
-      } else {
-        targetTeamId = Math.random() < 0.5 ? team1.id : team2.id;
-      }
+      const result = simulateBatchGifts(battlesRef.current, eventsRef.current, giftsToProcess);
+      setBattles(result.updatedBattles);
+      setBattleEvents(result.updatedEvents);
 
-      // Weighted gift amounts: amounts < ₦500 are very rare (< 2%)
-      const rand = Math.random();
-      let amount = 500;
-      if (rand < 0.007) {
-        amount = 100;
-      } else if (rand < 0.02) {
-        amount = 200;
-      } else if (rand < 0.42) {
-        amount = 500;
-      } else if (rand < 0.74) {
-        amount = 1000;
-      } else if (rand < 0.90) {
-        amount = 2000;
-      } else if (rand < 0.97) {
-        amount = 5000;
-      } else if (rand < 0.993) {
-        amount = 10000;
-      } else {
-        amount = 20000;
-      }
-
-      // Update team in battle state
-      setBattles((prevBattles) => {
-        return prevBattles.map((b) => {
-          if (b.id !== targetBattle.id) return b;
-          const updatedTeams = b.teams.map((t) => {
-            if (t.id === targetTeamId) {
-              return {
-                ...t,
-                totalBalance: t.totalBalance + amount,
-                fanCount: t.fanCount + 1
-              };
-            }
-            return t;
-          }) as [Team, Team];
-
-          return {
-            ...b,
-            teams: updatedTeams
-          };
-        });
-      });
-
-      // Fan name based on battle
-      let fanList = BURNA_DAVIDO_FANS;
-      if (targetBattle.id === 'ayra_vs_tiwa') {
-        fanList = AYRA_TIWA_FANS;
-      } else if (targetBattle.id === 'davido_vs_wizkid') {
-        fanList = DAVIDO_WIZKID_FANS;
-      } else if (targetBattle.id === 'nicki_vs_cardi') {
-        fanList = NICKI_CARDI_FANS;
-      } else if (targetBattle.id === 'tacha_vs_mercy') {
-        fanList = TACHA_MERCY_FANS;
-      }
-
-      const fanName = fanList[Math.floor(Math.random() * fanList.length)];
-      const targetTeam = targetBattle.teams.find((t) => t.id === targetTeamId);
-
-      const newEvt: FanActivityEvent = {
-        id: `evt_sim_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
-        timestamp: Date.now(),
-        fanName: fanName,
-        amount: amount,
-        teamId: targetTeamId,
-        teamName: targetTeam?.name || 'Star',
-        eventType: amount >= 5000 ? 'whale' : 'donation',
-        message: `Gifted ₦${amount.toLocaleString()} to ${targetTeam?.name || 'Star'}`
-      };
-
-      setBattleEvents((prev) => ({
-        ...prev,
-        [targetBattle.id]: [newEvt, ...(prev[targetBattle.id] || []).slice(0, 39)]
-      }));
-
-      // Schedule next simulated gift tick between 1.5s and 3.2s
-      const delay = 1500 + Math.random() * 1700;
-      timerId = setTimeout(executeSimulatedGift, delay);
+      // Fast frequency: 250ms to 550ms (averaging ~400ms = 2.5 gifts/second)
+      const nextDelay = 250 + Math.random() * 300;
+      timerId = setTimeout(runSimulationStep, nextDelay);
     };
 
-    timerId = setTimeout(executeSimulatedGift, 800);
+    // Start rapid simulation
+    timerId = setTimeout(runSimulationStep, 250);
+
+    // Visibility / focus catch-up when user returns to observing the page
+    const handleCatchUpOnWake = () => {
+      const now = Date.now();
+      const lastSavedTime = parseInt(localStorage.getItem(STORAGE_KEYS.LAST_SIM_TIME) || '0', 10);
+      const referenceTime = Math.max(lastSavedTime, lastTickTimeRef.current);
+
+      if (now - referenceTime > 800) {
+        const catchUp = calculateElapsedCatchUp(battlesRef.current, eventsRef.current, referenceTime);
+        if (catchUp.giftsSimulated > 0) {
+          setBattles(catchUp.updatedBattles);
+          setBattleEvents(catchUp.updatedEvents);
+        }
+      }
+      lastTickTimeRef.current = now;
+      localStorage.setItem(STORAGE_KEYS.LAST_SIM_TIME, now.toString());
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        handleCatchUpOnWake();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleCatchUpOnWake);
 
     return () => {
       clearTimeout(timerId);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleCatchUpOnWake);
+      localStorage.setItem(STORAGE_KEYS.LAST_SIM_TIME, Date.now().toString());
     };
-  }, [battles]);
+  }, []);
 
   // True gifting action by real users
   const handlePaymentSuccess = (teamId: string, amount: number) => {
