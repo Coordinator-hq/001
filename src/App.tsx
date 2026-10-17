@@ -17,9 +17,9 @@ import {
 } from './utils/simulation';
 
 const STORAGE_KEYS = {
-  BATTLES: 'fanbrawl_battles_burna_ayra_v3',
-  EVENTS: 'fanbrawl_events_burna_ayra_v3',
-  LAST_SIM_TIME: 'fanbrawl_last_sim_timestamp'
+  BATTLES: 'fanwars_battles_celebrity_v6',
+  EVENTS: 'fanwars_events_celebrity_v6',
+  LAST_SIM_TIME: 'fanwars_last_sim_timestamp_v6'
 };
 
 // Helper to load and catch up initial state from localStorage
@@ -55,7 +55,8 @@ function getInitialBattlesAndEvents(): {
               bgGradient: isTeam1
                 ? 'from-red-500/25 via-rose-500/10 to-transparent'
                 : 'from-blue-500/25 via-indigo-500/10 to-transparent',
-              logoUrl: initTeam?.logoUrl || st.logoUrl,
+              // Always guarantee the exact user image from initial configuration is used
+              logoUrl: initTeam ? initTeam.logoUrl : st.logoUrl,
               slogan: initTeam?.slogan || st.slogan,
               tag: initTeam?.tag || st.tag,
               championshipWins: typeof st.championshipWins === 'number' && st.championshipWins > 0
