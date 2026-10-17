@@ -1,6 +1,6 @@
 {
-  "name": "FanBrawl",
-  "description": "FanBrawl — Live Head-to-Head Fan Battles and Real-Time Gifting.",
+  "name": "FanWars",
+  "description": "FanWars — Live Head-to-Head Fan Battles and Real-Time Gifting.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }
