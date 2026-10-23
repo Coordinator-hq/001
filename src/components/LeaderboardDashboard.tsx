@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import {
   Trophy,
   Crown,
@@ -33,6 +33,78 @@ export const LeaderboardDashboard: React.FC<LeaderboardDashboardProps> = ({
 }) => {
   const [activeSector, setActiveSector] = useState<SectorCategory>('master');
   const [searchQuery, setSearchQuery] = useState<string>('');
+
+  // Refs for tab auto-scrolling
+  const tabRefs = useRef<{ [key: string]: HTMLButtonElement | null }>({});
+
+  // Touch gesture refs
+  const touchStartX = useRef<number | null>(null);
+  const touchStartY = useRef<number | null>(null);
+  const touchStartTime = useRef<number>(0);
+
+  // Sector indexes and next/prev helpers
+  const currentSectorIndex = useMemo(() => {
+    const idx = SECTOR_CONFIGS.findIndex((c) => c.id === activeSector);
+    return idx >= 0 ? idx : 0;
+  }, [activeSector]);
+
+  const nextSector = useMemo(() => {
+    return SECTOR_CONFIGS[(currentSectorIndex + 1) % SECTOR_CONFIGS.length];
+  }, [currentSectorIndex]);
+
+  const prevSector = useMemo(() => {
+    return SECTOR_CONFIGS[(currentSectorIndex - 1 + SECTOR_CONFIGS.length) % SECTOR_CONFIGS.length];
+  }, [currentSectorIndex]);
+
+  const handleNextSector = () => {
+    setActiveSector(nextSector.id);
+    setSearchQuery('');
+  };
+
+  const handlePrevSector = () => {
+    setActiveSector(prevSector.id);
+    setSearchQuery('');
+  };
+
+  // Scroll active tab into view when active sector changes
+  useEffect(() => {
+    const tabEl = tabRefs.current[activeSector];
+    if (tabEl) {
+      tabEl.scrollIntoView({
+        behavior: 'smooth',
+        inline: 'center',
+        block: 'nearest'
+      });
+    }
+  }, [activeSector]);
+
+  // Touch swipe event handlers
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+    touchStartY.current = e.touches[0].clientY;
+    touchStartTime.current = Date.now();
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartX.current === null || touchStartY.current === null) return;
+    const deltaX = e.changedTouches[0].clientX - touchStartX.current;
+    const deltaY = e.changedTouches[0].clientY - touchStartY.current;
+    const deltaTime = Date.now() - touchStartTime.current;
+
+    touchStartX.current = null;
+    touchStartY.current = null;
+
+    // Trigger only if horizontal movement is distinct and meets threshold
+    if (Math.abs(deltaX) > 40 && Math.abs(deltaX) > Math.abs(deltaY) * 1.25 && deltaTime < 700) {
+      if (deltaX < 0) {
+        // Swiped Left -> Change to next sector
+        handleNextSector();
+      } else {
+        // Swiped Right -> Return to previous sector
+        handlePrevSector();
+      }
+    }
+  };
 
   // Active sector config
   const currentConfig = useMemo(() => {
@@ -104,7 +176,11 @@ export const LeaderboardDashboard: React.FC<LeaderboardDashboardProps> = ({
   };
 
   return (
-    <div className="w-full max-w-4xl mx-auto font-sans select-none animate-fadeIn pb-16 pt-2 sm:pt-4 px-2 sm:px-4">
+    <div 
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+      className="w-full max-w-4xl mx-auto font-sans select-none animate-fadeIn pb-16 pt-2 sm:pt-4 px-2 sm:px-4 touch-pan-y"
+    >
 
       {/* Sector Category Navigation Tabs (Pill Switcher) */}
       <nav 
@@ -116,6 +192,9 @@ export const LeaderboardDashboard: React.FC<LeaderboardDashboardProps> = ({
           return (
             <button
               key={sector.id}
+              ref={(el) => {
+                tabRefs.current[sector.id] = el;
+              }}
               type="button"
               onClick={() => {
                 setActiveSector(sector.id);
@@ -171,16 +250,20 @@ export const LeaderboardDashboard: React.FC<LeaderboardDashboardProps> = ({
       {/* Sector Header Banner & Search */}
       <div className="bg-[#0d1020] border border-[#1e233d] rounded-2xl mb-5 shadow-lg overflow-hidden">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5">
-          <div>
-            <h2 className="text-base font-extrabold text-white flex items-center gap-2">
-              <span>{currentConfig.label}</span>
-              <span className="text-xs font-bold text-slate-400">
-                ({sortedFigures.length} Figures)
-              </span>
-            </h2>
-            <p className="text-xs text-slate-400">
-              {currentConfig.description}
-            </p>
+          <div className="flex items-center gap-3">
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="text-base font-extrabold text-white flex items-center gap-2">
+                  <span>{currentConfig.label}</span>
+                  <span className="text-xs font-bold text-slate-400">
+                    ({sortedFigures.length} Figures)
+                  </span>
+                </h2>
+              </div>
+              <p className="text-xs text-slate-400">
+                {currentConfig.description}
+              </p>
+            </div>
           </div>
 
           {/* Search Input */}
@@ -198,13 +281,15 @@ export const LeaderboardDashboard: React.FC<LeaderboardDashboardProps> = ({
 
         {/* Official Standings relocated just under search bar */}
         <div className="px-4 py-2.5 border-t border-[#1c2138] bg-[#090b14] flex items-center justify-between">
-          <span className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
-            <TrendingUp className="w-3.5 h-3.5 text-amber-400" />
-            <span>Official Standings</span>
-          </span>
-          <span className="text-[11px] font-bold text-slate-500">
-            Sorted by Total Gifts
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+              <TrendingUp className="w-3.5 h-3.5 text-amber-400" />
+              <span>Official Standings</span>
+            </span>
+            <span className="text-[11px] font-bold text-slate-500">
+              • Sorted by Total Gifts
+            </span>
+          </div>
         </div>
       </div>
 
