@@ -10,11 +10,12 @@ import {
   Video,
   Eye,
   Flame,
-  Sparkles,
   Gift,
   Search,
   TrendingUp,
-  Radio
+  Radio,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import { TwitterVerifiedBadge } from './TwitterVerifiedBadge';
 import { LeaderboardFigure, SectorCategory, LiveGiftEvent } from '../types/leaderboard';
@@ -37,10 +38,11 @@ export const LeaderboardDashboard: React.FC<LeaderboardDashboardProps> = ({
   // Refs for tab auto-scrolling
   const tabRefs = useRef<{ [key: string]: HTMLButtonElement | null }>({});
 
-  // Touch gesture refs
+  // Touch & Mouse Gesture Refs
   const touchStartX = useRef<number | null>(null);
   const touchStartY = useRef<number | null>(null);
   const touchStartTime = useRef<number>(0);
+  const isDraggingMouse = useRef<boolean>(false);
 
   // Sector indexes and next/prev helpers
   const currentSectorIndex = useMemo(() => {
@@ -78,7 +80,7 @@ export const LeaderboardDashboard: React.FC<LeaderboardDashboardProps> = ({
     }
   }, [activeSector]);
 
-  // Touch swipe event handlers
+  // Optimized Touch Swipe Gesture Event Handlers
   const handleTouchStart = (e: React.TouchEvent) => {
     touchStartX.current = e.touches[0].clientX;
     touchStartY.current = e.touches[0].clientY;
@@ -94,13 +96,42 @@ export const LeaderboardDashboard: React.FC<LeaderboardDashboardProps> = ({
     touchStartX.current = null;
     touchStartY.current = null;
 
-    // Trigger only if horizontal movement is distinct and meets threshold
-    if (Math.abs(deltaX) > 40 && Math.abs(deltaX) > Math.abs(deltaY) * 1.25 && deltaTime < 700) {
+    // Ultra-responsive sensitivity: 25px threshold, 1.05 horizontal/vertical ratio
+    if (Math.abs(deltaX) > 25 && Math.abs(deltaX) > Math.abs(deltaY) * 1.05 && deltaTime < 850) {
       if (deltaX < 0) {
-        // Swiped Left -> Change to next sector
         handleNextSector();
       } else {
-        // Swiped Right -> Return to previous sector
+        handlePrevSector();
+      }
+    }
+  };
+
+  // Mouse Drag Event Handlers for Desktop Testing
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if ((e.target as HTMLElement).closest('button, input, a')) return;
+    isDraggingMouse.current = true;
+    touchStartX.current = e.clientX;
+    touchStartY.current = e.clientY;
+    touchStartTime.current = Date.now();
+  };
+
+  const handleMouseUp = (e: React.MouseEvent) => {
+    if (!isDraggingMouse.current || touchStartX.current === null || touchStartY.current === null) {
+      isDraggingMouse.current = false;
+      return;
+    }
+    const deltaX = e.clientX - touchStartX.current;
+    const deltaY = e.clientY - touchStartY.current;
+    const deltaTime = Date.now() - touchStartTime.current;
+
+    isDraggingMouse.current = false;
+    touchStartX.current = null;
+    touchStartY.current = null;
+
+    if (Math.abs(deltaX) > 25 && Math.abs(deltaX) > Math.abs(deltaY) * 1.05 && deltaTime < 850) {
+      if (deltaX < 0) {
+        handleNextSector();
+      } else {
         handlePrevSector();
       }
     }
@@ -115,15 +146,12 @@ export const LeaderboardDashboard: React.FC<LeaderboardDashboardProps> = ({
   const sortedFigures = useMemo(() => {
     let list = [...figures];
 
-    // Filter by sector if not master
     if (activeSector !== 'master') {
       list = list.filter((f) => f.sector === activeSector);
     }
 
-    // Sort descending by totalBalance (Gifts received)
     list.sort((a, b) => b.totalBalance - a.totalBalance);
 
-    // Filter by search query if any
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       list = list.filter(
@@ -131,30 +159,21 @@ export const LeaderboardDashboard: React.FC<LeaderboardDashboardProps> = ({
           f.name.toLowerCase().includes(q) ||
           f.fandomName.toLowerCase().includes(q) ||
           f.tag.toLowerCase().includes(q) ||
-          f.sectorLabel.toLowerCase().includes(q)
+          f.slogan.toLowerCase().includes(q)
       );
     }
 
     return list;
   }, [figures, activeSector, searchQuery]);
 
-  // Top 3 Podium
+  // Podium top 3 & remaining standings
   const top1 = sortedFigures[0];
   const top2 = sortedFigures[1];
   const top3 = sortedFigures[2];
   const remainingRows = sortedFigures.slice(3);
 
-  // Sector stats
-  const totalVolume = useMemo(() => {
-    return sortedFigures.reduce((sum, f) => sum + f.totalBalance, 0);
-  }, [sortedFigures]);
-
-  const totalFans = useMemo(() => {
-    return sortedFigures.reduce((sum, f) => sum + f.fanCount, 0);
-  }, [sortedFigures]);
-
-  // Sector Icon renderer
-  const renderSectorIcon = (iconName: string, className = 'w-4 h-4') => {
+  // Sector Icon Resolver
+  const renderSectorIcon = (iconName: string, className: string) => {
     switch (iconName) {
       case 'Trophy':
         return <Trophy className={className} />;
@@ -179,7 +198,9 @@ export const LeaderboardDashboard: React.FC<LeaderboardDashboardProps> = ({
     <div 
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
-      className="w-full max-w-4xl mx-auto font-sans select-none animate-fadeIn pb-16 pt-2 sm:pt-4 px-2 sm:px-4 touch-pan-y uppercase tracking-wide"
+      onMouseDown={handleMouseDown}
+      onMouseUp={handleMouseUp}
+      className="w-full max-w-4xl mx-auto font-sans select-none animate-fadeIn pb-16 pt-2 sm:pt-4 px-2 sm:px-4 touch-pan-y uppercase tracking-wide cursor-grab active:cursor-grabbing"
     >
 
       {/* Sector Category Navigation Tabs (Pill Switcher) */}
@@ -260,7 +281,7 @@ export const LeaderboardDashboard: React.FC<LeaderboardDashboardProps> = ({
                   </span>
                 </h2>
               </div>
-              <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+              <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
                 {currentConfig.description}
               </p>
             </div>
@@ -279,7 +300,7 @@ export const LeaderboardDashboard: React.FC<LeaderboardDashboardProps> = ({
           </div>
         </div>
 
-        {/* Official Standings relocated just under search bar */}
+        {/* Official Standings Status */}
         <div className="px-4 py-2.5 border-t border-[#1c2138] bg-[#090b14] flex items-center justify-between">
           <div className="flex items-center gap-2">
             <span className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
@@ -363,7 +384,7 @@ export const LeaderboardDashboard: React.FC<LeaderboardDashboardProps> = ({
                 />
               </div>
 
-              <div className="flex items-center justify-center gap-1.5 max-w-full px-1">
+              <div className="flex items-center justify-center gap-1 max-w-full px-1">
                 <span className="text-sm sm:text-base font-black text-white truncate leading-tight">
                   {top1.name}
                 </span>
@@ -371,11 +392,11 @@ export const LeaderboardDashboard: React.FC<LeaderboardDashboardProps> = ({
                   <TwitterVerifiedBadge className="w-4 h-4" />
                 )}
               </div>
-              <span className="text-[10px] text-amber-300/80 font-bold truncate max-w-full block mb-1">
+              <span className="text-[11px] text-amber-300/90 font-bold truncate max-w-full block mb-1">
                 {top1.fandomName}
               </span>
 
-              <span className="text-sm sm:text-lg font-black text-amber-300 tabular-nums">
+              <span className="text-sm sm:text-base font-black text-amber-300 tabular-nums">
                 ₦{top1.totalBalance.toLocaleString()}
               </span>
 
@@ -452,51 +473,54 @@ export const LeaderboardDashboard: React.FC<LeaderboardDashboardProps> = ({
               <div
                 key={row.id}
                 onClick={() => onSelectFigureToGift(row)}
-                className="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-3 hover:bg-[#12162a] transition-colors cursor-pointer group"
+                className="p-3 sm:p-3.5 flex items-center justify-between gap-2.5 sm:gap-4 hover:bg-[#121629]/80 transition-colors cursor-pointer group"
               >
-                {/* Rank */}
-                <div className="w-6 sm:w-7 text-center shrink-0 font-black">
-                  <span
-                    className={`inline-flex items-center justify-center w-6 h-6 rounded-lg text-xs tabular-nums ${
-                      isTop5
-                        ? 'bg-amber-500/20 text-amber-300 font-extrabold'
-                        : 'text-slate-400 font-bold'
-                    }`}
-                  >
-                    {actualRank}
+                {/* Rank Number */}
+                <div className="w-8 shrink-0 text-center font-black">
+                  <span className={`text-xs sm:text-sm ${
+                    actualRank === 1 ? 'text-amber-400 text-base' :
+                    actualRank === 2 ? 'text-slate-300' :
+                    actualRank === 3 ? 'text-amber-600' : 'text-slate-500'
+                  }`}>
+                    #{actualRank}
                   </span>
                 </div>
 
-                {/* Avatar */}
-                <div className="relative shrink-0">
-                  <img
-                    src={row.avatarUrl}
-                    alt={row.name}
-                    className="w-10 h-10 rounded-xl object-cover border border-[#262c4a] shadow"
-                    onError={(e) => {
-                      (e.target as HTMLElement).style.display = 'none';
-                    }}
-                  />
-                </div>
-
-                {/* Name, Fandom & Sector */}
-                <div className="min-w-0 flex-1 pr-1">
-                  <div className="flex items-center gap-1.5 min-w-0">
-                    <span className="text-xs sm:text-sm font-extrabold text-white truncate block group-hover:text-amber-300 transition-colors">
-                      {row.name}
-                    </span>
-                    {row.verified && (
-                      <TwitterVerifiedBadge className="w-3.5 h-3.5" />
-                    )}
-                    {activeSector === 'master' && (
-                      <span className="hidden sm:inline-block text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-[#161a2e] text-slate-300 border border-[#252c4b] shrink-0">
-                        {row.sectorLabel}
+                {/* Figure Avatar & Metadata */}
+                <div className="flex items-center gap-2.5 sm:gap-3 flex-1 min-w-0">
+                  <div className="relative shrink-0">
+                    <img
+                      src={row.avatarUrl}
+                      alt={row.name}
+                      className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl object-cover border border-[#262c4a] group-hover:border-amber-400/80 transition-all"
+                      onError={(e) => {
+                        (e.target as HTMLElement).style.display = 'none';
+                      }}
+                    />
+                    {isTop5 && (
+                      <span className="absolute -bottom-1 -right-1 text-[8px] font-black bg-amber-500 text-black px-1 rounded-full uppercase">
+                        TOP 5
                       </span>
                     )}
                   </div>
-                  <span className="text-[10px] sm:text-[11px] text-slate-400 truncate block">
-                    {row.fandomName}
-                  </span>
+
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="font-black text-white text-xs sm:text-sm group-hover:text-amber-300 transition-colors truncate">
+                        {row.name}
+                      </span>
+                      {row.verified && (
+                        <TwitterVerifiedBadge className="w-3.5 h-3.5 shrink-0" />
+                      )}
+                      <span className="text-[9px] font-black bg-[#171c33] text-slate-400 px-1.5 py-0.5 rounded-md uppercase tracking-wider shrink-0">
+                        {row.sectorLabel}
+                      </span>
+                    </div>
+
+                    <p className="text-[10px] text-slate-400 font-bold truncate mt-0.5">
+                      {row.fandomName} • <span className="text-slate-500 font-semibold">{row.slogan}</span>
+                    </p>
+                  </div>
                 </div>
 
                 {/* Gifts Received */}

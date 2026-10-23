@@ -241,7 +241,7 @@ export const GiftingModal: React.FC<GiftingModalProps> = ({
           <div className="bg-[#121629]/60 border border-[#1e233d] rounded-2xl p-3 flex items-start gap-2.5 text-[11px] font-bold text-slate-300">
             <Flame className="w-4 h-4 text-amber-400 flex-shrink-0 mt-0.5" />
             <span>
-              GIFTING DIRECTLY BOOSTS <strong className="text-white font-black">{figure.name}</strong> ON BOTH THEIR <strong className="text-amber-400 font-black">{figure.sectorLabel}</strong> LEADERBOARD AND THE <strong className="text-amber-400 font-black">MASTER LEADERBOARD</strong> ACROSS ALL USERS!
+              GIFTING DIRECTLY BOOSTS <strong className="text-white font-black">{figure.name}</strong> ON BOTH THEIR <strong className="text-amber-400 font-black">{figure.sectorLabel}</strong> LEADERBOARD AND THE <strong className="text-amber-400 font-black">MASTER LEADERBOARD</strong>!
             </span>
           </div>
 
