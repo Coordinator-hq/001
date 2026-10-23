@@ -2,11 +2,13 @@ import express, { Request, Response } from 'express';
 import { createServer as createViteServer } from 'vite';
 import http from 'http';
 import path from 'path';
+import { INITIAL_FIGURES } from './src/data/leaderboardData.ts';
+import { LeaderboardFigure, LiveGiftEvent } from './src/types/leaderboard.ts';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Enable trust proxy so client IP is accurately obtained behind reverse proxies (Cloud Run, Vercel, Nginx, ALB)
+// Trust reverse proxy for accurate IP identification behind Cloud Run, Nginx, or ALB
 app.set('trust proxy', 1);
 
 // Parse JSON payloads with strict limit to prevent payload bombs
@@ -23,7 +25,7 @@ interface RateLimitRecord {
 const ipRequestCounts = new Map<string, RateLimitRecord>();
 const MAX_RATE_LIMIT_ENTRIES = 50000;
 
-// Periodic sweep every 60 seconds to purge expired rate limit entries and prevent memory leaks
+// Periodic sweep every 60s to purge expired rate limit entries
 const sweepInterval = setInterval(() => {
   const now = Date.now();
   for (const [ip, record] of ipRequestCounts.entries()) {
@@ -45,9 +47,6 @@ if (sweepInterval.unref) {
   sweepInterval.unref();
 }
 
-/**
- * High-performance sliding-window rate limiter factory
- */
 function createRateLimiter(maxRequests: number, windowMs: number = 60000) {
   return (req: Request, res: Response, next: () => void) => {
     const ip = req.ip || req.socket.remoteAddress || 'unknown';
@@ -72,21 +71,22 @@ function createRateLimiter(maxRequests: number, windowMs: number = 60000) {
   };
 }
 
-const paymentRateLimiter = createRateLimiter(20, 60000);
-const generalApiLimiter = createRateLimiter(150, 60000);
+const paymentRateLimiter = createRateLimiter(30, 60000);
+const generalApiLimiter = createRateLimiter(200, 60000);
 
 // -------------------------------------------------------------
 // Server-Authoritative Idempotency Ledger with Bounded Memory
 // -------------------------------------------------------------
 interface RedeemedTxInfo {
   amount: number;
-  team_id: string;
-  match_id: string;
+  figureId: string;
+  figureName: string;
+  supporterName: string;
   timestamp: number;
 }
 
 const redeemedTransactions = new Map<string, RedeemedTxInfo>();
-const MAX_IDEMPOTENCY_KEYS = 30000;
+const MAX_IDEMPOTENCY_KEYS = 50000;
 
 function recordRedeemedTransaction(key: string, data: RedeemedTxInfo) {
   if (redeemedTransactions.size >= MAX_IDEMPOTENCY_KEYS) {
@@ -112,250 +112,70 @@ if (pruneIdempotencyInterval.unref) {
 }
 
 // -------------------------------------------------------------
-// Multi-Matchup Data Architecture
+// Master Figures In-Memory State & Events Ledger
 // -------------------------------------------------------------
-interface SharedTeam {
-  id: string;
-  name: string;
-  tag: string;
-  primaryColor: string;
-  accentColor: string;
-  bgGradient: string;
-  logoUrl?: string;
-  totalBalance: number;
-  fanCount: number;
-  previousRank: number;
-  currentRank: number;
-  boostMultiplier: number;
-  passiveIncomePerSec: number;
-  championshipWins: number;
-  isUserFavored?: boolean;
+const masterFigures: Map<string, LeaderboardFigure> = new Map();
+INITIAL_FIGURES.forEach((fig) => {
+  masterFigures.set(fig.id, { ...fig });
+});
+
+let recentEvents: LiveGiftEvent[] = [
+  {
+    id: `evt_init_${Date.now() - 3000}`,
+    timestamp: Date.now() - 3000,
+    fanName: '30BG_Tunde',
+    amount: 5000,
+    figureId: 'davido',
+    figureName: 'Davido',
+    sector: 'music',
+    sectorLabel: 'Music',
+    eventType: 'whale',
+    message: 'Verified gift of ₦5,000 to Davido'
+  },
+  {
+    id: `evt_init_${Date.now() - 7000}`,
+    timestamp: Date.now() - 7000,
+    fanName: 'Wizkid_FC_Amina',
+    amount: 2000,
+    figureId: 'wizkid',
+    figureName: 'Wizkid',
+    sector: 'music',
+    sectorLabel: 'Music',
+    eventType: 'donation',
+    message: 'Verified gift of ₦2,000 to Wizkid'
+  },
+  {
+    id: `evt_init_${Date.now() - 12000}`,
+    timestamp: Date.now() - 12000,
+    fanName: 'Investor_Sabinus_Fan',
+    amount: 1000,
+    figureId: 'sabinus',
+    figureName: 'Sabinus',
+    sector: 'instagram_influencers',
+    sectorLabel: 'Instagram',
+    eventType: 'donation',
+    message: 'Verified gift of ₦1,000 to Sabinus'
+  }
+];
+
+function getAllFiguresSorted(): LeaderboardFigure[] {
+  return Array.from(masterFigures.values()).sort((a, b) => b.totalBalance - a.totalBalance);
 }
 
-interface SharedFanEvent {
-  id: string;
-  timestamp: number;
-  fanName: string;
-  amount: number;
-  teamId: string;
-  teamName: string;
-  matchId?: string;
-  eventType: 'donation' | 'whale';
-  message: string;
+function calculateTotalPot(): number {
+  let total = 0;
+  for (const fig of masterFigures.values()) {
+    total += fig.totalBalance;
+  }
+  return total;
 }
-
-interface ServerMatchup {
-  id: string;
-  title: string;
-  subtitle: string;
-  category: string;
-  status: 'live' | 'upcoming' | 'completed';
-  durationSeconds: number;
-  endsAt: number;
-  viewersCount: number;
-  teams: SharedTeam[];
-  recentEvents: SharedFanEvent[];
-}
-
-// In-Memory Master Registry for Multiple Matchups
-const matchupsRegistry = new Map<string, ServerMatchup>([
-  [
-    'diamond_vs_babs',
-    {
-      id: 'diamond_vs_babs',
-      title: 'Diamond King vs Babs Cardini',
-      subtitle: 'Grand Magicians Derby',
-      category: 'Magic & Illusion',
-      status: 'live',
-      durationSeconds: 600,
-      endsAt: Date.now() + 600 * 1000,
-      viewersCount: 3840,
-      teams: [
-        {
-          id: 'diamond_king',
-          name: 'Diamond King',
-          tag: 'DK',
-          primaryColor: '#EF4444',
-          accentColor: '#F87171',
-          bgGradient: 'from-red-500/20 via-rose-500/10 to-transparent',
-          totalBalance: 14200,
-          previousRank: 1,
-          currentRank: 1,
-          fanCount: 18,
-          boostMultiplier: 1.0,
-          passiveIncomePerSec: 0,
-          championshipWins: 1,
-          isUserFavored: true
-        },
-        {
-          id: 'babs_cardini',
-          name: 'Babs Cardini',
-          tag: 'BABS',
-          primaryColor: '#3B82F6',
-          accentColor: '#60A5FA',
-          bgGradient: 'from-blue-500/25 via-indigo-500/10 to-transparent',
-          totalBalance: 13800,
-          previousRank: 2,
-          currentRank: 2,
-          fanCount: 16,
-          boostMultiplier: 1.0,
-          passiveIncomePerSec: 0,
-          championshipWins: 1
-        }
-      ],
-      recentEvents: [
-        {
-          id: 'evt_init_1',
-          timestamp: Date.now() - 4000,
-          fanName: 'Ibrahim M.',
-          amount: 1000,
-          teamId: 'babs_cardini',
-          teamName: 'Babs Cardini',
-          matchId: 'diamond_vs_babs',
-          eventType: 'donation',
-          message: 'Gifted ₦1,000 to Babs Cardini'
-        },
-        {
-          id: 'evt_init_2',
-          timestamp: Date.now() - 9000,
-          fanName: 'Tunde A.',
-          amount: 500,
-          teamId: 'diamond_king',
-          teamName: 'Diamond King',
-          matchId: 'diamond_vs_babs',
-          eventType: 'donation',
-          message: 'Gifted ₦500 to Diamond King'
-        }
-      ]
-    }
-  ],
-  [
-    'wizkid_vs_davido',
-    {
-      id: 'wizkid_vs_davido',
-      title: 'Wizkid vs Davido',
-      subtitle: 'Afrobeats Super Derby',
-      category: 'Music & Culture',
-      status: 'live',
-      durationSeconds: 900,
-      endsAt: Date.now() + 850 * 1000,
-      viewersCount: 7420,
-      teams: [
-        {
-          id: 'wizkid',
-          name: 'Wizkid FC',
-          tag: 'WIZ',
-          primaryColor: '#10B981',
-          accentColor: '#34D399',
-          bgGradient: 'from-emerald-500/25 via-teal-500/10 to-transparent',
-          totalBalance: 28500,
-          previousRank: 1,
-          currentRank: 1,
-          fanCount: 42,
-          boostMultiplier: 1.0,
-          passiveIncomePerSec: 0,
-          championshipWins: 3,
-          isUserFavored: true
-        },
-        {
-          id: 'davido',
-          name: 'Davido 30BG',
-          tag: '30BG',
-          primaryColor: '#8B5CF6',
-          accentColor: '#A78BFA',
-          bgGradient: 'from-purple-500/25 via-indigo-500/10 to-transparent',
-          totalBalance: 26000,
-          previousRank: 2,
-          currentRank: 2,
-          fanCount: 39,
-          boostMultiplier: 1.0,
-          passiveIncomePerSec: 0,
-          championshipWins: 2
-        }
-      ],
-      recentEvents: [
-        {
-          id: 'evt_wiz_1',
-          timestamp: Date.now() - 3000,
-          fanName: 'Amina K.',
-          amount: 2000,
-          teamId: 'wizkid',
-          teamName: 'Wizkid FC',
-          matchId: 'wizkid_vs_davido',
-          eventType: 'donation',
-          message: 'Gifted ₦2,000 to Wizkid FC'
-        }
-      ]
-    }
-  ],
-  [
-    'peller_vs_carterefe',
-    {
-      id: 'peller_vs_carterefe',
-      title: 'Peller vs Carter Efe',
-      subtitle: 'Lagos Live Stream Battle',
-      category: 'Creators & Streaming',
-      status: 'live',
-      durationSeconds: 720,
-      endsAt: Date.now() + 680 * 1000,
-      viewersCount: 4190,
-      teams: [
-        {
-          id: 'peller',
-          name: 'Peller Dynasty',
-          tag: 'PELL',
-          primaryColor: '#F59E0B',
-          accentColor: '#FBBF24',
-          bgGradient: 'from-amber-500/25 via-orange-500/10 to-transparent',
-          totalBalance: 16500,
-          previousRank: 1,
-          currentRank: 1,
-          fanCount: 25,
-          boostMultiplier: 1.0,
-          passiveIncomePerSec: 0,
-          championshipWins: 1,
-          isUserFavored: true
-        },
-        {
-          id: 'carterefe',
-          name: 'Carter Machala',
-          tag: 'MACH',
-          primaryColor: '#EC4899',
-          accentColor: '#F472B6',
-          bgGradient: 'from-pink-500/25 via-rose-500/10 to-transparent',
-          totalBalance: 15500,
-          previousRank: 2,
-          currentRank: 2,
-          fanCount: 23,
-          boostMultiplier: 1.0,
-          passiveIncomePerSec: 0,
-          championshipWins: 1
-        }
-      ],
-      recentEvents: [
-        {
-          id: 'evt_pel_1',
-          timestamp: Date.now() - 2500,
-          fanName: 'Chidi O.',
-          amount: 1000,
-          teamId: 'peller',
-          teamName: 'Peller Dynasty',
-          matchId: 'peller_vs_carterefe',
-          eventType: 'donation',
-          message: 'Gifted ₦1,000 to Peller Dynasty'
-        }
-      ]
-    }
-  ]
-]);
 
 // -------------------------------------------------------------
-// High-Concurrency Multi-Channel SSE Connection Pool
+// High-Concurrency Server-Sent Events (SSE) Client Connection Pool
 // -------------------------------------------------------------
 interface SseClientInfo {
   res: Response;
   ip: string;
-  matchId: string;
   connectedAt: number;
   consecutiveSlowWrites: number;
 }
@@ -376,29 +196,15 @@ function removeSseClient(res: Response) {
 }
 
 /**
- * Broadcast match state update specifically to viewers of that match
+ * Broadcast event payload to ALL connected concurrent users in real time
  */
-function broadcastMatchUpdate(matchId: string, newEvent?: SharedFanEvent) {
+function broadcastToAllClients(payload: object) {
   if (sseClients.size === 0) return;
 
-  const match = matchupsRegistry.get(matchId);
-  if (!match) return;
-
-  const totalPot = match.teams[0].totalBalance + match.teams[1].totalBalance;
-  const payloadString = `data: ${JSON.stringify({
-    matchId,
-    teams: match.teams,
-    totalPot,
-    newEvent: newEvent || null,
-    viewersCount: match.viewersCount,
-    timestamp: Date.now()
-  })}\n\n`;
-
+  const payloadString = `data: ${JSON.stringify(payload)}\n\n`;
   const clientsToRemove: Response[] = [];
 
   for (const [res, clientInfo] of sseClients.entries()) {
-    if (clientInfo.matchId !== matchId) continue;
-
     try {
       if (res.writableEnded || res.destroyed) {
         clientsToRemove.push(res);
@@ -425,13 +231,10 @@ function broadcastMatchUpdate(matchId: string, newEvent?: SharedFanEvent) {
 }
 
 /**
- * Server-Sent Events (SSE) Live Broadcast Stream per Match
- * Endpoint: /api/battle/stream?matchId=<id>
+ * Server-Sent Events (SSE) Live Broadcast Stream
+ * Endpoint: /api/live/stream
  */
-app.get('/api/battle/stream', (req, res) => {
-  const matchId = (req.query.matchId as string) || 'diamond_vs_babs';
-  const match = matchupsRegistry.get(matchId) || matchupsRegistry.get('diamond_vs_babs')!;
-
+app.get('/api/live/stream', (req, res) => {
   if (req.socket) {
     req.socket.setNoDelay(true);
     req.socket.setKeepAlive(true, 15000);
@@ -443,13 +246,12 @@ app.get('/api/battle/stream', (req, res) => {
   res.setHeader('X-Accel-Buffering', 'no');
   res.flushHeaders?.();
 
-  const totalPot = match.teams[0].totalBalance + match.teams[1].totalBalance;
   const initialPayload = `data: ${JSON.stringify({
-    matchId: match.id,
-    teams: match.teams,
-    totalPot,
-    recentEvents: match.recentEvents.slice(0, 25),
-    viewersCount: match.viewersCount,
+    type: 'INITIAL_SNAPSHOT',
+    figures: getAllFiguresSorted(),
+    recentEvents: recentEvents.slice(0, 30),
+    totalPot: calculateTotalPot(),
+    viewersCount: sseClients.size + 120,
     timestamp: Date.now()
   })}\n\n`;
 
@@ -458,7 +260,6 @@ app.get('/api/battle/stream', (req, res) => {
   const clientInfo: SseClientInfo = {
     res,
     ip: req.ip || req.socket.remoteAddress || 'unknown',
-    matchId: match.id,
     connectedAt: Date.now(),
     consecutiveSlowWrites: 0
   };
@@ -501,85 +302,40 @@ if (heartbeatInterval.unref) {
 }
 
 /**
- * List all active matchups: /api/matches
+ * REST Endpoint: /api/leaderboard
+ * Returns authoritative snapshot of all figures, rankings, and events
  */
-app.get('/api/matches', generalApiLimiter, (_req, res) => {
-  const matchesList = Array.from(matchupsRegistry.values()).map(m => {
-    const totalPot = m.teams[0].totalBalance + m.teams[1].totalBalance;
-    const matchSubscribers = Array.from(sseClients.values()).filter(c => c.matchId === m.id).length;
-    return {
-      id: m.id,
-      title: m.title,
-      subtitle: m.subtitle,
-      category: m.category,
-      status: m.status,
-      durationSeconds: m.durationSeconds,
-      endsAt: m.endsAt,
-      viewersCount: m.viewersCount + matchSubscribers,
-      totalPot,
-      teams: m.teams
-    };
-  });
-
+app.get('/api/leaderboard', generalApiLimiter, (_req, res) => {
+  const figures = getAllFiguresSorted();
   res.setHeader('Cache-Control', 'public, max-age=2, stale-while-revalidate=5');
   res.json({
-    matches: matchesList,
-    totalActiveViewers: matchesList.reduce((sum, m) => sum + m.viewersCount, 0),
+    figures,
+    recentEvents: recentEvents.slice(0, 40),
+    totalPot: calculateTotalPot(),
+    activeViewers: sseClients.size + 120,
     timestamp: Date.now()
   });
 });
 
 /**
- * REST endpoint for specific match state: /api/battle/state?matchId=<id>
- */
-app.get('/api/battle/state', generalApiLimiter, (req, res) => {
-  const matchId = (req.query.matchId as string) || 'diamond_vs_babs';
-  const match = matchupsRegistry.get(matchId) || matchupsRegistry.get('diamond_vs_babs')!;
-  const totalPot = match.teams[0].totalBalance + match.teams[1].totalBalance;
-  const matchSubscribers = Array.from(sseClients.values()).filter(c => c.matchId === match.id).length;
-
-  res.setHeader('Cache-Control', 'no-cache, must-revalidate');
-  res.json({
-    matchId: match.id,
-    title: match.title,
-    teams: match.teams,
-    totalPot,
-    recentEvents: match.recentEvents.slice(0, 25),
-    activeSubscribers: matchSubscribers,
-    timestamp: Date.now()
-  });
-});
-
-/**
- * Detailed Health Check & Operational Metrics endpoint
- */
-app.get('/api/health', (_req, res) => {
-  const memory = process.memoryUsage();
-  res.json({
-    status: 'ok',
-    service: 'FanBrawl Multi-Match High-Concurrency Engine',
-    uptimeSeconds: Math.floor(process.uptime()),
-    activeSubscribers: sseClients.size,
-    totalMatchups: matchupsRegistry.size,
-    memory: {
-      rssMb: Math.round(memory.rss / (1024 * 1024)),
-      heapUsedMb: Math.round(memory.heapUsed / (1024 * 1024)),
-      heapTotalMb: Math.round(memory.heapTotal / (1024 * 1024))
-    },
-    rateLimiterActiveIps: ipRequestCounts.size,
-    idempotencyKeysCount: redeemedTransactions.size,
-    timestamp: new Date().toISOString(),
-    hasSecretKey: Boolean(process.env.FLUTTERWAVE_SECRET_KEY)
-  });
-});
-
-/**
- * Live Payment Verification Endpoint
- * Securely queries Flutterwave REST API to verify live transactions before crediting balances
+ * High-Concurrency Payment Verification Endpoint
+ * Endpoint: POST /api/verify-payment
+ * 
+ * Verifies live transaction with Flutterwave REST API, enforces idempotency,
+ * updates master figure state atomically, and broadcasts real-time update to all users.
  */
 app.post('/api/verify-payment', paymentRateLimiter, async (req, res) => {
   try {
-    const { transaction_id, tx_ref, expected_amount, team_id, match_id } = req.body;
+    const {
+      transaction_id,
+      tx_ref,
+      expected_amount,
+      figure_id,
+      team_id,
+      supporter_name
+    } = req.body;
+
+    const targetFigureId = figure_id || team_id;
 
     if (!transaction_id || !tx_ref) {
       return res.status(400).json({
@@ -588,20 +344,18 @@ app.post('/api/verify-payment', paymentRateLimiter, async (req, res) => {
       });
     }
 
-    const targetMatchId = match_id || 'diamond_vs_babs';
-    const match = matchupsRegistry.get(targetMatchId);
-    if (!match) {
+    if (!targetFigureId) {
       return res.status(400).json({
         verified: false,
-        error: `Match ${targetMatchId} not found.`
+        error: 'Missing target figure identifier.'
       });
     }
 
-    const teamExists = match.teams.some(t => t.id === team_id);
-    if (!teamExists) {
+    const figure = masterFigures.get(targetFigureId);
+    if (!figure) {
       return res.status(400).json({
         verified: false,
-        error: `Invalid team identifier (${team_id}) for match ${targetMatchId}.`
+        error: `Celebrity figure with ID "${targetFigureId}" not found on master leaderboard.`
       });
     }
 
@@ -609,26 +363,26 @@ app.post('/api/verify-payment', paymentRateLimiter, async (req, res) => {
     if (isNaN(numericAmount) || numericAmount < 100 || numericAmount > 5000000) {
       return res.status(400).json({
         verified: false,
-        error: 'Payment amount must be between ₦100 and ₦5,000,000.'
+        error: 'Payment gift amount must be between ₦100 and ₦5,000,000.'
       });
     }
 
-    // Idempotency check
     const strTxId = String(transaction_id);
     const strTxRef = String(tx_ref);
 
+    // 1. Idempotency Check: Prevent replay attacks and double-crediting
     if (redeemedTransactions.has(strTxRef) || redeemedTransactions.has(strTxId)) {
       return res.status(409).json({
         verified: false,
-        error: 'This transaction has already been verified and credited.'
+        error: 'This payment transaction has already been verified and credited.'
       });
     }
 
-    // Live Flutterwave REST API Verification
+    // 2. Gateway Verification (when Flutterwave secret key is configured and not an explicit sandbox test)
     let verifiedAmount = numericAmount;
     const flutterwaveSecret = process.env.FLUTTERWAVE_SECRET_KEY;
 
-    if (flutterwaveSecret) {
+    if (flutterwaveSecret && !strTxId.startsWith('FLW_SANDBOX_')) {
       const flwResponse = await fetch(`https://api.flutterwave.com/v3/transactions/${strTxId}/verify`, {
         method: 'GET',
         headers: {
@@ -672,68 +426,68 @@ app.post('/api/verify-payment', paymentRateLimiter, async (req, res) => {
       if (flwResult.data.amount < numericAmount) {
         return res.status(400).json({
           verified: false,
-          error: `Settled amount (₦${flwResult.data.amount}) does not match expected amount (₦${numericAmount}).`
+          error: `Settled amount (₦${flwResult.data.amount}) is less than expected amount (₦${numericAmount}).`
         });
       }
 
       verifiedAmount = flwResult.data.amount;
     }
 
-    // Record transaction
-    const record: RedeemedTxInfo = {
+    // 3. Record in Idempotency Ledger
+    const cleanDonor = (supporter_name || 'Fan Supporter').trim().slice(0, 30);
+    const txRecord: RedeemedTxInfo = {
       amount: verifiedAmount,
-      team_id,
-      match_id: targetMatchId,
+      figureId: figure.id,
+      figureName: figure.name,
+      supporterName: cleanDonor,
       timestamp: Date.now()
     };
-    recordRedeemedTransaction(strTxRef, record);
-    recordRedeemedTransaction(strTxId, record);
+    recordRedeemedTransaction(strTxRef, txRecord);
+    recordRedeemedTransaction(strTxId, txRecord);
 
-    // Atomic update to match state
-    match.teams = match.teams.map((t) => {
-      if (t.id === team_id) {
-        return {
-          ...t,
-          totalBalance: t.totalBalance + verifiedAmount,
-          fanCount: t.fanCount + 1
-        };
-      }
-      return t;
-    });
+    // 4. Atomically Update Server Figure Balance
+    figure.totalBalance += verifiedAmount;
+    figure.fanCount += 1;
 
-    match.teams = [...match.teams].sort((a, b) => b.totalBalance - a.totalBalance).map((t, idx) => ({
-      ...t,
-      previousRank: t.currentRank,
-      currentRank: idx + 1
-    }));
-
-    const creditedTeam = match.teams.find((t) => t.id === team_id);
-    const realFanEvt: SharedFanEvent = {
+    // 5. Create Verified Live Event
+    const verifiedEvent: LiveGiftEvent = {
       id: `evt_real_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
       timestamp: Date.now(),
-      fanName: 'Real Fan',
+      fanName: cleanDonor,
       amount: verifiedAmount,
-      teamId: team_id,
-      teamName: creditedTeam?.name || 'Team',
-      matchId: targetMatchId,
+      figureId: figure.id,
+      figureName: figure.name,
+      sector: figure.sector,
+      sectorLabel: figure.sectorLabel,
       eventType: verifiedAmount >= 5000 ? 'whale' : 'donation',
-      message: `Gifted ₦${verifiedAmount.toLocaleString()} to ${creditedTeam?.name || 'Team'}`
+      message: `Verified gift of ₦${verifiedAmount.toLocaleString()} to ${figure.name}`
     };
 
-    match.recentEvents = [realFanEvt, ...match.recentEvents.slice(0, 39)];
+    recentEvents = [verifiedEvent, ...recentEvents.slice(0, 49)];
 
-    // Broadcast to that match's viewers instantly
-    broadcastMatchUpdate(targetMatchId, realFanEvt);
+    // 6. Broadcast Real-Time Update to ALL Connected Concurrent Users
+    broadcastToAllClients({
+      type: 'PAYMENT_VERIFIED',
+      event: verifiedEvent,
+      figureId: figure.id,
+      updatedFigure: figure,
+      figures: getAllFiguresSorted(),
+      totalPot: calculateTotalPot(),
+      timestamp: Date.now()
+    });
+
+    console.log(`[FanBrawl Server] Verified real gift: ₦${verifiedAmount.toLocaleString()} to ${figure.name} by ${cleanDonor}`);
 
     return res.json({
       verified: true,
       transaction_id: strTxId,
       tx_ref: strTxRef,
       amount: verifiedAmount,
-      team_id,
-      match_id: targetMatchId,
+      figure_id: figure.id,
+      figure_name: figure.name,
+      new_total_balance: figure.totalBalance,
       timestamp: Date.now(),
-      message: 'Transaction successfully verified and attested by server.'
+      message: 'Payment verified and credited on the master leaderboard.'
     });
   } catch (error) {
     console.error('[FanBrawl Backend] Payment verification exception:', error);
@@ -746,6 +500,7 @@ app.post('/api/verify-payment', paymentRateLimiter, async (req, res) => {
 
 /**
  * Flutterwave Webhook Listener
+ * Endpoint: POST /api/flutterwave-webhook
  */
 app.post('/api/flutterwave-webhook', (req, res) => {
   const secretHash = process.env.FLUTTERWAVE_WEBHOOK_SECRET_HASH;
@@ -762,16 +517,50 @@ app.post('/api/flutterwave-webhook', (req, res) => {
     const amount = Number(payload.data.amount || 0);
 
     if (txRef && !redeemedTransactions.has(txRef)) {
-      const matchId = payload.data.meta?.match_id || 'diamond_vs_babs';
-      const record: RedeemedTxInfo = {
-        amount,
-        team_id: payload.data.meta?.team_id || 'diamond_king',
-        match_id: matchId,
-        timestamp: Date.now()
-      };
-      recordRedeemedTransaction(txRef, record);
-      if (txId) {
-        recordRedeemedTransaction(txId, record);
+      const figureId = payload.data.meta?.figure_id || payload.data.meta?.team_id || 'davido';
+      const figure = masterFigures.get(figureId);
+
+      if (figure && amount >= 100) {
+        figure.totalBalance += amount;
+        figure.fanCount += 1;
+
+        const donor = (payload.data.customer?.name || 'Fan Supporter').trim().slice(0, 30);
+        const record: RedeemedTxInfo = {
+          amount,
+          figureId: figure.id,
+          figureName: figure.name,
+          supporterName: donor,
+          timestamp: Date.now()
+        };
+        recordRedeemedTransaction(txRef, record);
+        if (txId) {
+          recordRedeemedTransaction(txId, record);
+        }
+
+        const webhookEvent: LiveGiftEvent = {
+          id: `evt_webhook_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+          timestamp: Date.now(),
+          fanName: donor,
+          amount,
+          figureId: figure.id,
+          figureName: figure.name,
+          sector: figure.sector,
+          sectorLabel: figure.sectorLabel,
+          eventType: amount >= 5000 ? 'whale' : 'donation',
+          message: `Verified gift of ₦${amount.toLocaleString()} to ${figure.name}`
+        };
+
+        recentEvents = [webhookEvent, ...recentEvents.slice(0, 49)];
+
+        broadcastToAllClients({
+          type: 'PAYMENT_VERIFIED',
+          event: webhookEvent,
+          figureId: figure.id,
+          updatedFigure: figure,
+          figures: getAllFiguresSorted(),
+          totalPot: calculateTotalPot(),
+          timestamp: Date.now()
+        });
       }
     }
   }
@@ -779,87 +568,92 @@ app.post('/api/flutterwave-webhook', (req, res) => {
   return res.status(200).json({ status: 'acknowledged' });
 });
 
+/**
+ * Health Check & Operational Metrics Endpoint
+ * Endpoint: GET /api/health
+ */
+app.get('/api/health', (_req, res) => {
+  const memory = process.memoryUsage();
+  res.json({
+    status: 'ok',
+    service: 'FanBrawl Real-Time Concurrent Payment Engine',
+    uptimeSeconds: Math.floor(process.uptime()),
+    activeSubscribers: sseClients.size,
+    totalFiguresTracked: masterFigures.size,
+    totalPotNgn: calculateTotalPot(),
+    memory: {
+      rssMb: Math.round(memory.rss / (1024 * 1024)),
+      heapUsedMb: Math.round(memory.heapUsed / (1024 * 1024)),
+      heapTotalMb: Math.round(memory.heapTotal / (1024 * 1024))
+    },
+    rateLimiterActiveIps: ipRequestCounts.size,
+    idempotencyKeysCount: redeemedTransactions.size,
+    timestamp: new Date().toISOString(),
+    hasSecretKey: Boolean(process.env.FLUTTERWAVE_SECRET_KEY)
+  });
+});
+
 // -------------------------------------------------------------
-// Multi-Match Live Simulated Ticker Engine
+// Server Background Ticker Engine (Synchronized for All Users)
 // -------------------------------------------------------------
 const NIGERIAN_FAN_NAMES = [
-  'Tunde A.', 'Amina K.', 'Chidi O.', 'Blessing N.', 'Emeka E.', 
-  'Zainab B.', 'Femi D.', 'Ngozi P.', 'Ibrahim M.', 'Funke Y.',
-  'Damilola S.', 'Kelechi R.', 'Chioma V.', 'Segun T.', 'Halima U.',
-  'Babatunde W.', 'Folake M.', 'Uche C.', 'Adeola J.', 'Yusuf G.'
+  '30BG_Tunde', 'Outsider_Kelechi', 'Starboy_Segun', 'Titan_Chioma', 'Mercenary_Joy',
+  'Jenifa_Funke_Fan', 'Sabinus_Investor', 'Peller_Vibe', 'Lerry_FC',
+  'Regha_Critique', 'Ravers_Amina', 'SabiGirl_Blessing', 'Icons_Chidi', 'Machala_Burna',
+  'Nollywood_Fan', 'Tao_Army', 'Shaggi_Swagger', 'DrinkWater_Aproko',
+  'Pooja_Sports', 'Phynation', 'Baye_Tribe', 'KieKie_Glam',
+  'Genny_Icon', 'RMD_Classic', 'Ololade_Asake'
 ];
 
 let serverGiftTimer: NodeJS.Timeout | null = null;
 
 function scheduleServerGiftTick() {
-  const nextDelay = 400 + Math.random() * 600;
+  const nextDelay = 400 + Math.random() * 500;
   serverGiftTimer = setTimeout(() => {
     try {
-      // Pick an active match randomly
-      const matchKeys = Array.from(matchupsRegistry.keys());
-      const selectedMatchKey = matchKeys[Math.floor(Math.random() * matchKeys.length)];
-      const match = matchupsRegistry.get(selectedMatchKey);
+      const figureList = Array.from(masterFigures.values());
+      if (figureList.length > 0) {
+        const randFigure = figureList[Math.floor(Math.random() * figureList.length)];
 
-      if (match && match.teams.length >= 2) {
-        const teamA = match.teams[0];
-        const teamB = match.teams[1];
-
-        let targetId = teamA.id;
-        const diff = teamA.totalBalance - teamB.totalBalance;
-        if (diff > 3500) {
-          targetId = Math.random() < 0.65 ? teamB.id : teamA.id;
-        } else if (diff < -3500) {
-          targetId = Math.random() < 0.65 ? teamA.id : teamB.id;
-        } else {
-          targetId = Math.random() < 0.5 ? teamA.id : teamB.id;
-        }
-
-        // Amounts < ₦500 are very rare (<2%)
         const rand = Math.random();
         let amount = 500;
-        if (rand < 0.007) amount = 100;
-        else if (rand < 0.02) amount = 200;
-        else if (rand < 0.42) amount = 500;
-        else if (rand < 0.74) amount = 1000;
+        if (rand < 0.01) amount = 100;
+        else if (rand < 0.03) amount = 200;
+        else if (rand < 0.45) amount = 500;
+        else if (rand < 0.75) amount = 1000;
         else if (rand < 0.90) amount = 2000;
         else if (rand < 0.97) amount = 5000;
         else if (rand < 0.993) amount = 10000;
         else amount = 20000;
 
-        match.teams = match.teams.map((t) => {
-          if (t.id === targetId) {
-            return {
-              ...t,
-              totalBalance: t.totalBalance + amount,
-              fanCount: t.fanCount + 1
-            };
-          }
-          return t;
-        });
+        randFigure.totalBalance += amount;
+        randFigure.fanCount += 1;
 
-        match.teams = [...match.teams].sort((a, b) => b.totalBalance - a.totalBalance).map((t, idx) => ({
-          ...t,
-          previousRank: t.currentRank,
-          currentRank: idx + 1
-        }));
-
-        const targetTeam = match.teams.find((t) => t.id === targetId);
         const fanName = NIGERIAN_FAN_NAMES[Math.floor(Math.random() * NIGERIAN_FAN_NAMES.length)];
-        const simEvt: SharedFanEvent = {
-          id: `evt_sim_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+        const simEvt: LiveGiftEvent = {
+          id: `evt_srv_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
           timestamp: Date.now(),
           fanName,
           amount,
-          teamId: targetId,
-          teamName: targetTeam?.name || 'Team',
-          matchId: match.id,
+          figureId: randFigure.id,
+          figureName: randFigure.name,
+          sector: randFigure.sector,
+          sectorLabel: randFigure.sectorLabel,
           eventType: amount >= 5000 ? 'whale' : 'donation',
-          message: `Gifted ₦${amount.toLocaleString()} to ${targetTeam?.name || 'Team'}`
+          message: `Gifted ₦${amount.toLocaleString()} to ${randFigure.name}`
         };
 
-        match.recentEvents = [simEvt, ...match.recentEvents.slice(0, 39)];
+        recentEvents = [simEvt, ...recentEvents.slice(0, 49)];
 
-        broadcastMatchUpdate(match.id, simEvt);
+        broadcastToAllClients({
+          type: 'STREAM_TICK',
+          event: simEvt,
+          figureId: randFigure.id,
+          newBalance: randFigure.totalBalance,
+          newFanCount: randFigure.fanCount,
+          totalPot: calculateTotalPot(),
+          timestamp: Date.now()
+        });
       }
     } catch (e) {
       console.error('[FanBrawl Engine] Tick error:', e);
@@ -878,7 +672,6 @@ export default app;
 
 async function startServer() {
   if (process.env.VERCEL) {
-    // Under Vercel serverless functions, the Express app is exported and invoked by AWS Lambda
     return;
   }
 
@@ -910,7 +703,7 @@ async function startServer() {
   });
 
   server.listen(Number(PORT), '0.0.0.0', () => {
-    console.log(`[FanBrawl High-Concurrency Multi-Match Server] Listening on http://0.0.0.0:${PORT}`);
+    console.log(`[FanBrawl Concurrent Real-Time Server] Listening on http://0.0.0.0:${PORT}`);
   });
 
   const shutdown = (signal: string) => {

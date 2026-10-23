@@ -179,7 +179,7 @@ export const LeaderboardDashboard: React.FC<LeaderboardDashboardProps> = ({
     <div 
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
-      className="w-full max-w-4xl mx-auto font-sans select-none animate-fadeIn pb-16 pt-2 sm:pt-4 px-2 sm:px-4 touch-pan-y"
+      className="w-full max-w-4xl mx-auto font-sans select-none animate-fadeIn pb-16 pt-2 sm:pt-4 px-2 sm:px-4 touch-pan-y uppercase tracking-wide"
     >
 
       {/* Sector Category Navigation Tabs (Pill Switcher) */}
@@ -200,7 +200,7 @@ export const LeaderboardDashboard: React.FC<LeaderboardDashboardProps> = ({
                 setActiveSector(sector.id);
                 setSearchQuery('');
               }}
-              className={`flex items-center gap-2 px-3.5 py-2 rounded-2xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer border flex-shrink-0 ${
+              className={`flex items-center gap-2 px-3.5 py-2 rounded-2xl text-xs font-black whitespace-nowrap transition-all cursor-pointer border flex-shrink-0 tracking-wider ${
                 isActive
                   ? 'bg-gradient-to-r from-amber-500 to-yellow-400 text-black border-amber-400 shadow-[0_0_20px_rgba(245,158,11,0.35)] scale-[1.02]'
                   : 'bg-[#0c0e1a] hover:bg-[#161a2e] text-slate-300 border-[#1f243d]'
@@ -212,7 +212,7 @@ export const LeaderboardDashboard: React.FC<LeaderboardDashboardProps> = ({
                 <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-black ${
                   isActive ? 'bg-black text-amber-300' : 'bg-amber-500/20 text-amber-300'
                 }`}>
-                  Top 60
+                  TOP 60
                 </span>
               )}
             </button>
@@ -223,21 +223,21 @@ export const LeaderboardDashboard: React.FC<LeaderboardDashboardProps> = ({
       {/* Live Activity Stream Marquee / Ticker */}
       {liveEvents.length > 0 && (
         <div className="mb-4 bg-[#0a0c16] border border-[#1b2038] rounded-2xl p-2.5 overflow-hidden flex items-center gap-3">
-          <div className="flex items-center gap-1.5 text-[11px] font-black uppercase text-amber-400 bg-amber-500/10 px-2 py-1 rounded-xl flex-shrink-0">
+          <div className="flex items-center gap-1.5 text-[11px] font-black uppercase text-amber-400 bg-amber-500/10 px-2 py-1 rounded-xl flex-shrink-0 tracking-wider">
             <Radio className="w-3 h-3 text-amber-400 animate-pulse" />
-            <span className="hidden xs:inline">Latest Gifts</span>
+            <span className="hidden xs:inline">LATEST GIFTS</span>
           </div>
 
           <div className="overflow-hidden whitespace-nowrap relative w-full text-xs text-slate-300 flex items-center gap-4">
             <div className="flex items-center gap-6 animate-pulse">
               {liveEvents.slice(0, 3).map((evt) => (
-                <div key={evt.id} className="inline-flex items-center gap-1.5 text-[11px]">
-                  <span className="font-bold text-white">{evt.fanName}</span>
-                  <span className="text-slate-500">gifted</span>
-                  <span className="font-extrabold text-amber-300">₦{evt.amount.toLocaleString()}</span>
-                  <span className="text-slate-500">to</span>
-                  <span className="font-bold text-sky-400">{evt.figureName}</span>
-                  <span className="text-[9px] bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded">
+                <div key={evt.id} className="inline-flex items-center gap-1.5 text-[11px] font-extrabold uppercase">
+                  <span className="font-black text-white">{evt.fanName}</span>
+                  <span className="text-slate-500 text-[10px]">GIFTED</span>
+                  <span className="font-black text-amber-300">₦{evt.amount.toLocaleString()}</span>
+                  <span className="text-slate-500 text-[10px]">TO</span>
+                  <span className="font-black text-sky-400">{evt.figureName}</span>
+                  <span className="text-[9px] font-black bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded">
                     {evt.sectorLabel}
                   </span>
                 </div>
@@ -253,14 +253,14 @@ export const LeaderboardDashboard: React.FC<LeaderboardDashboardProps> = ({
           <div className="flex items-center gap-3">
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-base font-extrabold text-white flex items-center gap-2">
+                <h2 className="text-base font-black text-white flex items-center gap-2 tracking-wide uppercase">
                   <span>{currentConfig.label}</span>
-                  <span className="text-xs font-bold text-slate-400">
-                    ({sortedFigures.length} Figures)
+                  <span className="text-xs font-black text-slate-400">
+                    ({sortedFigures.length} FIGURES)
                   </span>
                 </h2>
               </div>
-              <p className="text-xs text-slate-400">
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">
                 {currentConfig.description}
               </p>
             </div>
@@ -273,8 +273,8 @@ export const LeaderboardDashboard: React.FC<LeaderboardDashboardProps> = ({
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search star, fandom or tag..."
-              className="w-full bg-[#121629] border border-[#232845] focus:border-amber-400 rounded-xl pl-8 pr-3 py-1.5 text-xs text-white placeholder-slate-500 outline-none transition-colors"
+              placeholder="SEARCH STAR, FANDOM OR TAG..."
+              className="w-full bg-[#121629] border border-[#232845] focus:border-amber-400 rounded-xl pl-8 pr-3 py-1.5 text-xs font-bold text-white placeholder-slate-500 outline-none transition-colors uppercase tracking-wider"
             />
           </div>
         </div>
@@ -501,11 +501,11 @@ export const LeaderboardDashboard: React.FC<LeaderboardDashboardProps> = ({
 
                 {/* Gifts Received */}
                 <div className="text-right shrink-0">
-                  <span className="font-extrabold text-amber-300 text-xs sm:text-sm tabular-nums block">
+                  <span className="font-black text-amber-300 text-xs sm:text-sm tabular-nums block">
                     ₦{row.totalBalance.toLocaleString()}
                   </span>
-                  <span className="text-[9px] text-slate-500 font-medium">
-                    {row.fanCount.toLocaleString()} gifts
+                  <span className="text-[9px] text-slate-500 font-extrabold uppercase tracking-wider">
+                    {row.fanCount.toLocaleString()} GIFTS
                   </span>
                 </div>
 
@@ -527,8 +527,8 @@ export const LeaderboardDashboard: React.FC<LeaderboardDashboardProps> = ({
         </div>
 
         {sortedFigures.length === 0 && (
-          <div className="py-12 text-center text-slate-500 text-xs">
-            No figures found matching "{searchQuery}"
+          <div className="py-12 text-center text-slate-500 text-xs font-black uppercase tracking-wider">
+            NO FIGURES FOUND MATCHING "{searchQuery}"
           </div>
         )}
       </div>
