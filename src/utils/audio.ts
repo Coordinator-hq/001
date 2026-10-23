@@ -30,6 +30,10 @@ class SoundManager {
     }
   }
 
+  playButtonClick() {
+    this.playCoin();
+  }
+
   playLevelUp() {
     try {
       this.initCtx();

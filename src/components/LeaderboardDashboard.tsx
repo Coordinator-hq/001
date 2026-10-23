@@ -1,0 +1,453 @@
+import React, { useState, useMemo } from 'react';
+import {
+  Trophy,
+  Crown,
+  Medal,
+  Music2,
+  Film,
+  Twitter,
+  Instagram,
+  Video,
+  Eye,
+  Flame,
+  Sparkles,
+  Gift,
+  Search,
+  TrendingUp,
+  Radio
+} from 'lucide-react';
+import { TwitterVerifiedBadge } from './TwitterVerifiedBadge';
+import { LeaderboardFigure, SectorCategory, LiveGiftEvent } from '../types/leaderboard';
+import { SECTOR_CONFIGS } from '../data/leaderboardData';
+
+interface LeaderboardDashboardProps {
+  figures: LeaderboardFigure[];
+  liveEvents: LiveGiftEvent[];
+  onSelectFigureToGift: (figure: LeaderboardFigure) => void;
+}
+
+export const LeaderboardDashboard: React.FC<LeaderboardDashboardProps> = ({
+  figures,
+  liveEvents,
+  onSelectFigureToGift
+}) => {
+  const [activeSector, setActiveSector] = useState<SectorCategory>('master');
+  const [searchQuery, setSearchQuery] = useState<string>('');
+
+  // Active sector config
+  const currentConfig = useMemo(() => {
+    return SECTOR_CONFIGS.find((c) => c.id === activeSector) || SECTOR_CONFIGS[0];
+  }, [activeSector]);
+
+  // Filtered and sorted figures
+  const sortedFigures = useMemo(() => {
+    let list = [...figures];
+
+    // Filter by sector if not master
+    if (activeSector !== 'master') {
+      list = list.filter((f) => f.sector === activeSector);
+    }
+
+    // Sort descending by totalBalance (Gifts received)
+    list.sort((a, b) => b.totalBalance - a.totalBalance);
+
+    // Filter by search query if any
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      list = list.filter(
+        (f) =>
+          f.name.toLowerCase().includes(q) ||
+          f.fandomName.toLowerCase().includes(q) ||
+          f.tag.toLowerCase().includes(q) ||
+          f.sectorLabel.toLowerCase().includes(q)
+      );
+    }
+
+    return list;
+  }, [figures, activeSector, searchQuery]);
+
+  // Top 3 Podium
+  const top1 = sortedFigures[0];
+  const top2 = sortedFigures[1];
+  const top3 = sortedFigures[2];
+  const remainingRows = sortedFigures.slice(3);
+
+  // Sector stats
+  const totalVolume = useMemo(() => {
+    return sortedFigures.reduce((sum, f) => sum + f.totalBalance, 0);
+  }, [sortedFigures]);
+
+  const totalFans = useMemo(() => {
+    return sortedFigures.reduce((sum, f) => sum + f.fanCount, 0);
+  }, [sortedFigures]);
+
+  // Sector Icon renderer
+  const renderSectorIcon = (iconName: string, className = 'w-4 h-4') => {
+    switch (iconName) {
+      case 'Trophy':
+        return <Trophy className={className} />;
+      case 'Music2':
+        return <Music2 className={className} />;
+      case 'Film':
+        return <Film className={className} />;
+      case 'Twitter':
+        return <Twitter className={className} />;
+      case 'Instagram':
+        return <Instagram className={className} />;
+      case 'Video':
+        return <Video className={className} />;
+      case 'Eye':
+        return <Eye className={className} />;
+      default:
+        return <Trophy className={className} />;
+    }
+  };
+
+  return (
+    <div className="w-full max-w-4xl mx-auto font-sans select-none animate-fadeIn pb-16 pt-2 sm:pt-4 px-2 sm:px-4">
+
+      {/* Sector Category Navigation Tabs (Pill Switcher) */}
+      <nav 
+        aria-label="Leaderboard Categories"
+        className="flex items-center gap-2 overflow-x-auto pb-2 mb-4 scrollbar-none no-scrollbar -mx-2 px-2 sm:mx-0 sm:px-0"
+      >
+        {SECTOR_CONFIGS.map((sector) => {
+          const isActive = activeSector === sector.id;
+          return (
+            <button
+              key={sector.id}
+              type="button"
+              onClick={() => {
+                setActiveSector(sector.id);
+                setSearchQuery('');
+              }}
+              className={`flex items-center gap-2 px-3.5 py-2 rounded-2xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer border flex-shrink-0 ${
+                isActive
+                  ? 'bg-gradient-to-r from-amber-500 to-yellow-400 text-black border-amber-400 shadow-[0_0_20px_rgba(245,158,11,0.35)] scale-[1.02]'
+                  : 'bg-[#0c0e1a] hover:bg-[#161a2e] text-slate-300 border-[#1f243d]'
+              }`}
+            >
+              {renderSectorIcon(sector.icon, isActive ? 'text-black w-3.5 h-3.5' : 'text-slate-400 w-3.5 h-3.5')}
+              <span>{sector.label}</span>
+              {sector.id === 'master' && (
+                <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-black ${
+                  isActive ? 'bg-black text-amber-300' : 'bg-amber-500/20 text-amber-300'
+                }`}>
+                  Top 60
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </nav>
+
+      {/* Live Activity Stream Marquee / Ticker */}
+      {liveEvents.length > 0 && (
+        <div className="mb-4 bg-[#0a0c16] border border-[#1b2038] rounded-2xl p-2.5 overflow-hidden flex items-center gap-3">
+          <div className="flex items-center gap-1.5 text-[11px] font-black uppercase text-amber-400 bg-amber-500/10 px-2 py-1 rounded-xl flex-shrink-0">
+            <Radio className="w-3 h-3 text-amber-400 animate-pulse" />
+            <span className="hidden xs:inline">Latest Gifts</span>
+          </div>
+
+          <div className="overflow-hidden whitespace-nowrap relative w-full text-xs text-slate-300 flex items-center gap-4">
+            <div className="flex items-center gap-6 animate-pulse">
+              {liveEvents.slice(0, 3).map((evt) => (
+                <div key={evt.id} className="inline-flex items-center gap-1.5 text-[11px]">
+                  <span className="font-bold text-white">{evt.fanName}</span>
+                  <span className="text-slate-500">gifted</span>
+                  <span className="font-extrabold text-amber-300">₦{evt.amount.toLocaleString()}</span>
+                  <span className="text-slate-500">to</span>
+                  <span className="font-bold text-sky-400">{evt.figureName}</span>
+                  <span className="text-[9px] bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded">
+                    {evt.sectorLabel}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Sector Header Banner & Search */}
+      <div className="bg-[#0d1020] border border-[#1e233d] rounded-2xl mb-5 shadow-lg overflow-hidden">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5">
+          <div>
+            <h2 className="text-base font-extrabold text-white flex items-center gap-2">
+              <span>{currentConfig.label}</span>
+              <span className="text-xs font-bold text-slate-400">
+                ({sortedFigures.length} Figures)
+              </span>
+            </h2>
+            <p className="text-xs text-slate-400">
+              {currentConfig.description}
+            </p>
+          </div>
+
+          {/* Search Input */}
+          <div className="relative min-w-[220px]">
+            <Search className="w-3.5 h-3.5 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search star, fandom or tag..."
+              className="w-full bg-[#121629] border border-[#232845] focus:border-amber-400 rounded-xl pl-8 pr-3 py-1.5 text-xs text-white placeholder-slate-500 outline-none transition-colors"
+            />
+          </div>
+        </div>
+
+        {/* Official Standings relocated just under search bar */}
+        <div className="px-4 py-2.5 border-t border-[#1c2138] bg-[#090b14] flex items-center justify-between">
+          <span className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+            <TrendingUp className="w-3.5 h-3.5 text-amber-400" />
+            <span>Official Standings</span>
+          </span>
+          <span className="text-[11px] font-bold text-slate-500">
+            Sorted by Total Gifts
+          </span>
+        </div>
+      </div>
+
+      {/* TOP 3 PODIUM SHOWCASE (Shown when no search filter active) */}
+      {!searchQuery && top1 && top2 && top3 && (
+        <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-6 pt-6">
+          
+          {/* Rank 2 (Silver) */}
+          <div className="flex flex-col items-center justify-end order-1 sm:order-1">
+            <div className="relative w-full bg-[#0b0d18] border border-slate-700/60 rounded-3xl p-3 text-center flex flex-col items-center hover:border-slate-500 transition-all shadow-xl group">
+              <div className="absolute -top-3.5 bg-slate-700 text-slate-200 text-[10px] font-black uppercase px-2 py-0.5 rounded-full flex items-center gap-1 shadow">
+                <Medal className="w-3 h-3 text-slate-300" />
+                <span>#2 Rank</span>
+              </div>
+
+              <div className="relative my-2">
+                <img
+                  src={top2.avatarUrl}
+                  alt={top2.name}
+                  className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl object-cover border-2 border-slate-400 shadow-md group-hover:scale-105 transition-transform"
+                  onError={(e) => {
+                    (e.target as HTMLElement).style.display = 'none';
+                  }}
+                />
+              </div>
+
+              <div className="flex items-center justify-center gap-1 max-w-full px-1">
+                <span className="text-xs sm:text-sm font-black text-white truncate leading-tight">
+                  {top2.name}
+                </span>
+                {top2.verified && (
+                  <TwitterVerifiedBadge className="w-3.5 h-3.5" />
+                )}
+              </div>
+              <span className="text-[10px] text-slate-400 truncate max-w-full block mb-1">
+                {top2.fandomName}
+              </span>
+
+              <span className="text-xs sm:text-sm font-black text-amber-300 tabular-nums">
+                ₦{top2.totalBalance.toLocaleString()}
+              </span>
+
+              <button
+                type="button"
+                onClick={() => onSelectFigureToGift(top2)}
+                aria-label={`Gift ${top2.name}`}
+                title={`Gift ${top2.name}`}
+                className="mt-2.5 w-full py-2 rounded-xl bg-[#171a2e] hover:bg-amber-500 hover:text-black text-amber-400 border border-amber-500/40 transition-all cursor-pointer flex items-center justify-center active:scale-95 shadow"
+              >
+                <Gift className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+
+          {/* Rank 1 (Gold - Elevated Champion) */}
+          <div className="flex flex-col items-center justify-end -mt-5 order-2 sm:order-2">
+            <div className="relative w-full bg-gradient-to-b from-[#18150c] to-[#0c0d16] border-2 border-amber-400 rounded-3xl p-3 sm:p-4 text-center flex flex-col items-center shadow-[0_0_30px_rgba(245,158,11,0.25)] group">
+              <div className="absolute -top-4 bg-gradient-to-r from-amber-400 to-yellow-300 text-black text-[11px] font-black uppercase px-2.5 py-1 rounded-full flex items-center gap-1 shadow-lg">
+                <Crown className="w-3.5 h-3.5 fill-black" />
+                <span>#1 Leader</span>
+              </div>
+
+              <div className="relative my-2">
+                <img
+                  src={top1.avatarUrl}
+                  alt={top1.name}
+                  className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl object-cover border-2 border-amber-400 shadow-[0_0_20px_rgba(245,158,11,0.4)] group-hover:scale-105 transition-transform"
+                  onError={(e) => {
+                    (e.target as HTMLElement).style.display = 'none';
+                  }}
+                />
+              </div>
+
+              <div className="flex items-center justify-center gap-1.5 max-w-full px-1">
+                <span className="text-sm sm:text-base font-black text-white truncate leading-tight">
+                  {top1.name}
+                </span>
+                {top1.verified && (
+                  <TwitterVerifiedBadge className="w-4 h-4" />
+                )}
+              </div>
+              <span className="text-[10px] text-amber-300/80 font-bold truncate max-w-full block mb-1">
+                {top1.fandomName}
+              </span>
+
+              <span className="text-sm sm:text-lg font-black text-amber-300 tabular-nums">
+                ₦{top1.totalBalance.toLocaleString()}
+              </span>
+
+              <button
+                type="button"
+                onClick={() => onSelectFigureToGift(top1)}
+                aria-label={`Gift ${top1.name}`}
+                title={`Gift ${top1.name}`}
+                className="mt-2.5 w-full py-2 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-400 text-black shadow-[0_0_15px_rgba(245,158,11,0.3)] hover:brightness-110 transition-all cursor-pointer flex items-center justify-center active:scale-95"
+              >
+                <Gift className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+
+          {/* Rank 3 (Bronze) */}
+          <div className="flex flex-col items-center justify-end order-3 sm:order-3">
+            <div className="relative w-full bg-[#0b0d18] border border-amber-800/60 rounded-3xl p-3 text-center flex flex-col items-center hover:border-amber-700 transition-all shadow-xl group">
+              <div className="absolute -top-3.5 bg-amber-900/80 text-amber-200 text-[10px] font-black uppercase px-2 py-0.5 rounded-full flex items-center gap-1 shadow">
+                <Medal className="w-3 h-3 text-amber-400" />
+                <span>#3 Rank</span>
+              </div>
+
+              <div className="relative my-2">
+                <img
+                  src={top3.avatarUrl}
+                  alt={top3.name}
+                  className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl object-cover border-2 border-amber-700 shadow-md group-hover:scale-105 transition-transform"
+                  onError={(e) => {
+                    (e.target as HTMLElement).style.display = 'none';
+                  }}
+                />
+              </div>
+
+              <div className="flex items-center justify-center gap-1 max-w-full px-1">
+                <span className="text-xs sm:text-sm font-black text-white truncate leading-tight">
+                  {top3.name}
+                </span>
+                {top3.verified && (
+                  <TwitterVerifiedBadge className="w-3.5 h-3.5" />
+                )}
+              </div>
+              <span className="text-[10px] text-slate-400 truncate max-w-full block mb-1">
+                {top3.fandomName}
+              </span>
+
+              <span className="text-xs sm:text-sm font-black text-amber-300 tabular-nums">
+                ₦{top3.totalBalance.toLocaleString()}
+              </span>
+
+              <button
+                type="button"
+                onClick={() => onSelectFigureToGift(top3)}
+                aria-label={`Gift ${top3.name}`}
+                title={`Gift ${top3.name}`}
+                className="mt-2.5 w-full py-2 rounded-xl bg-[#171a2e] hover:bg-amber-500 hover:text-black text-amber-400 border border-amber-500/40 transition-all cursor-pointer flex items-center justify-center active:scale-95 shadow"
+              >
+                <Gift className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+
+        </div>
+      )}
+
+      {/* FULL LEADERBOARD LIST (Ranks 4+ or all when searching) */}
+      <div className="bg-[#0b0d18] border border-[#1e233d] rounded-3xl shadow-2xl overflow-hidden">
+        <div className="divide-y divide-[#14182b] text-xs">
+          {(searchQuery ? sortedFigures : remainingRows).map((row, idx) => {
+            const actualRank = searchQuery ? idx + 1 : idx + 4;
+            const isTop5 = actualRank <= 5;
+
+            return (
+              <div
+                key={row.id}
+                onClick={() => onSelectFigureToGift(row)}
+                className="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-3 hover:bg-[#12162a] transition-colors cursor-pointer group"
+              >
+                {/* Rank */}
+                <div className="w-6 sm:w-7 text-center shrink-0 font-black">
+                  <span
+                    className={`inline-flex items-center justify-center w-6 h-6 rounded-lg text-xs tabular-nums ${
+                      isTop5
+                        ? 'bg-amber-500/20 text-amber-300 font-extrabold'
+                        : 'text-slate-400 font-bold'
+                    }`}
+                  >
+                    {actualRank}
+                  </span>
+                </div>
+
+                {/* Avatar */}
+                <div className="relative shrink-0">
+                  <img
+                    src={row.avatarUrl}
+                    alt={row.name}
+                    className="w-10 h-10 rounded-xl object-cover border border-[#262c4a] shadow"
+                    onError={(e) => {
+                      (e.target as HTMLElement).style.display = 'none';
+                    }}
+                  />
+                </div>
+
+                {/* Name, Fandom & Sector */}
+                <div className="min-w-0 flex-1 pr-1">
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <span className="text-xs sm:text-sm font-extrabold text-white truncate block group-hover:text-amber-300 transition-colors">
+                      {row.name}
+                    </span>
+                    {row.verified && (
+                      <TwitterVerifiedBadge className="w-3.5 h-3.5" />
+                    )}
+                    {activeSector === 'master' && (
+                      <span className="hidden sm:inline-block text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-[#161a2e] text-slate-300 border border-[#252c4b] shrink-0">
+                        {row.sectorLabel}
+                      </span>
+                    )}
+                  </div>
+                  <span className="text-[10px] sm:text-[11px] text-slate-400 truncate block">
+                    {row.fandomName}
+                  </span>
+                </div>
+
+                {/* Gifts Received */}
+                <div className="text-right shrink-0">
+                  <span className="font-extrabold text-amber-300 text-xs sm:text-sm tabular-nums block">
+                    ₦{row.totalBalance.toLocaleString()}
+                  </span>
+                  <span className="text-[9px] text-slate-500 font-medium">
+                    {row.fanCount.toLocaleString()} gifts
+                  </span>
+                </div>
+
+                {/* Gift CTA: strictly icon-only, fully in frame */}
+                <div className="shrink-0 pl-1" onClick={(e) => e.stopPropagation()}>
+                  <button
+                    type="button"
+                    onClick={() => onSelectFigureToGift(row)}
+                    aria-label={`Gift ${row.name}`}
+                    title={`Gift ${row.name}`}
+                    className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-amber-500/15 hover:bg-amber-400 text-amber-400 hover:text-black border border-amber-500/30 flex items-center justify-center transition-all cursor-pointer active:scale-90"
+                  >
+                    <Gift className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {sortedFigures.length === 0 && (
+          <div className="py-12 text-center text-slate-500 text-xs">
+            No figures found matching "{searchQuery}"
+          </div>
+        )}
+      </div>
+
+    </div>
+  );
+};

@@ -4,88 +4,64 @@
  */
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Trophy, ChevronLeft, ChevronRight } from 'lucide-react';
-import { PvPBattleDashboard } from './components/PvPBattleDashboard';
-import { LeaderboardView, FandomLeaderboardItem } from './components/LeaderboardView';
-import { Team, FanActivityEvent } from './types/game';
-import { INITIAL_BATTLES } from './data/initialLeagueData';
+import { LeaderboardDashboard } from './components/LeaderboardDashboard';
+import { GiftingModal } from './components/GiftingModal';
+import { LeaderboardFigure, LiveGiftEvent } from './types/leaderboard';
+import { INITIAL_FIGURES } from './data/leaderboardData';
 import {
-  BattleItem,
-  simulateBatchGifts,
-  calculateElapsedCatchUp,
+  simulateBatchGiftsFigures,
+  calculateElapsedCatchUpFigures,
   SIMULATION_AVG_INTERVAL_MS
 } from './utils/simulation';
 
 const STORAGE_KEYS = {
-  BATTLES: 'fanwars_battles_celebrity_v6',
-  EVENTS: 'fanwars_events_celebrity_v6',
-  LAST_SIM_TIME: 'fanwars_last_sim_timestamp_v6'
+  FIGURES: 'fanwars_figures_master_v3',
+  EVENTS: 'fanwars_live_events_v3',
+  LAST_SIM_TIME: 'fanwars_sim_timestamp_v3'
 };
 
-// Helper to load and catch up initial state from localStorage
-function getInitialBattlesAndEvents(): {
-  battles: BattleItem[];
-  events: Record<string, FanActivityEvent[]>;
+// Helper to load, reconcile and catch-up figures state
+function getInitialFiguresAndEvents(): {
+  figures: LeaderboardFigure[];
+  events: LiveGiftEvent[];
 } {
-  let loadedBattles: BattleItem[] = INITIAL_BATTLES;
-  let loadedEvents: Record<string, FanActivityEvent[]> = {
-    burna_vs_davido: [],
-    ayra_vs_tiwa: [],
-    davido_vs_wizkid: [],
-    nicki_vs_cardi: [],
-    tacha_vs_mercy: []
-  };
+  let loadedFigures: LeaderboardFigure[] = INITIAL_FIGURES;
+  let loadedEvents: LiveGiftEvent[] = [];
 
-  const savedBattles = localStorage.getItem(STORAGE_KEYS.BATTLES);
-  if (savedBattles) {
+  const savedFigures = localStorage.getItem(STORAGE_KEYS.FIGURES);
+  if (savedFigures) {
     try {
-      const parsed = JSON.parse(savedBattles);
-      if (Array.isArray(parsed) && parsed.length >= 5) {
-        loadedBattles = parsed.map((savedBattle) => {
-          const initial = INITIAL_BATTLES.find((ib) => ib.id === savedBattle.id);
-          if (!initial) return savedBattle;
-
-          const updatedTeams = savedBattle.teams.map((st: Team, idx: number) => {
-            const initTeam = initial.teams.find((it) => it.id === st.id);
-            const isTeam1 = idx === 0 || (initTeam && initTeam.id === initial.teams[0].id);
-            return {
-              ...st,
-              primaryColor: isTeam1 ? '#EF4444' : '#3B82F6',
-              accentColor: isTeam1 ? '#F87171' : '#60A5FA',
-              bgGradient: isTeam1
-                ? 'from-red-500/25 via-rose-500/10 to-transparent'
-                : 'from-blue-500/25 via-indigo-500/10 to-transparent',
-              // Always guarantee the exact user image from initial configuration is used
-              logoUrl: initTeam ? initTeam.logoUrl : st.logoUrl,
-              slogan: initTeam?.slogan || st.slogan,
-              tag: initTeam?.tag || st.tag,
-              championshipWins: typeof st.championshipWins === 'number' && st.championshipWins > 0
-                ? st.championshipWins
-                : (initTeam?.championshipWins || 10),
-              totalBalance: typeof st.totalBalance === 'number' && st.totalBalance > 0 
-                ? st.totalBalance 
-                : (initTeam?.totalBalance || 25000)
-            };
-          });
-
+      const parsed = JSON.parse(savedFigures);
+      if (Array.isArray(parsed) && parsed.length >= 10) {
+        // Reconcile saved balance/fans with initial metadata and fresh photo URLs
+        loadedFigures = INITIAL_FIGURES.map((initFig) => {
+          const saved = parsed.find((p: LeaderboardFigure) => p.id === initFig.id);
+          if (!saved) return initFig;
           return {
-            ...initial,
-            ...savedBattle,
-            teams: updatedTeams as [Team, Team]
+            ...initFig,
+            totalBalance: typeof saved.totalBalance === 'number' && saved.totalBalance > 0
+              ? saved.totalBalance
+              : initFig.totalBalance,
+            fanCount: typeof saved.fanCount === 'number' && saved.fanCount > 0
+              ? saved.fanCount
+              : initFig.fanCount
           };
         });
       }
     } catch (e) {
-      console.error('Failed to parse saved battles:', e);
+      console.error('Failed to parse saved figures:', e);
     }
   }
 
   const savedEvents = localStorage.getItem(STORAGE_KEYS.EVENTS);
   if (savedEvents) {
     try {
-      loadedEvents = { ...loadedEvents, ...JSON.parse(savedEvents) };
+      const parsedEvts = JSON.parse(savedEvents);
+      if (Array.isArray(parsedEvts)) {
+        loadedEvents = parsedEvts;
+      }
     } catch (e) {
-      console.error('Failed to parse saved battle events:', e);
+      console.error('Failed to parse saved events:', e);
     }
   }
 
@@ -94,48 +70,44 @@ function getInitialBattlesAndEvents(): {
   if (lastTimeStr) {
     const lastTimestamp = parseInt(lastTimeStr, 10);
     if (!isNaN(lastTimestamp) && lastTimestamp > 0) {
-      const catchUp = calculateElapsedCatchUp(loadedBattles, loadedEvents, lastTimestamp);
-      loadedBattles = catchUp.updatedBattles;
+      const catchUp = calculateElapsedCatchUpFigures(loadedFigures, loadedEvents, lastTimestamp);
+      loadedFigures = catchUp.updatedFigures;
       loadedEvents = catchUp.updatedEvents;
     }
   }
 
-  // Record current timestamp
   localStorage.setItem(STORAGE_KEYS.LAST_SIM_TIME, Date.now().toString());
 
   return {
-    battles: loadedBattles,
+    figures: loadedFigures,
     events: loadedEvents
   };
 }
 
 export default function App() {
-  const [currentBattleIndex, setCurrentBattleIndex] = useState<number>(0);
-  const [showLeaderboard, setShowLeaderboard] = useState<boolean>(false);
+  const [initialData] = useState(() => getInitialFiguresAndEvents());
+  const [figures, setFigures] = useState<LeaderboardFigure[]>(initialData.figures);
+  const [liveEvents, setLiveEvents] = useState<LiveGiftEvent[]>(initialData.events);
+  const [selectedFigureToGift, setSelectedFigureToGift] = useState<LeaderboardFigure | null>(null);
 
-  // Initialize state with catch-up applied
-  const [initialData] = useState(() => getInitialBattlesAndEvents());
-  const [battles, setBattles] = useState<BattleItem[]>(initialData.battles);
-  const [battleEvents, setBattleEvents] = useState<Record<string, FanActivityEvent[]>>(initialData.events);
+  const figuresRef = useRef(figures);
+  figuresRef.current = figures;
 
-  const battlesRef = useRef(battles);
-  battlesRef.current = battles;
-
-  const eventsRef = useRef(battleEvents);
-  eventsRef.current = battleEvents;
+  const eventsRef = useRef(liveEvents);
+  eventsRef.current = liveEvents;
 
   const lastTickTimeRef = useRef<number>(Date.now());
 
   // Save state to localStorage
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.BATTLES, JSON.stringify(battles));
-  }, [battles]);
+    localStorage.setItem(STORAGE_KEYS.FIGURES, JSON.stringify(figures));
+  }, [figures]);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.EVENTS, JSON.stringify(battleEvents));
-  }, [battleEvents]);
+    localStorage.setItem(STORAGE_KEYS.EVENTS, JSON.stringify(liveEvents));
+  }, [liveEvents]);
 
-  // Faster simulated gifting loop & catch-up when returning to the tab
+  // Faster simulated gifting loop & continuous offline/background catch-up
   useEffect(() => {
     let timerId: ReturnType<typeof setTimeout>;
 
@@ -151,29 +123,28 @@ export default function App() {
         ? Math.min(Math.floor(elapsedSinceLastTick / SIMULATION_AVG_INTERVAL_MS), 60)
         : 1;
 
-      const result = simulateBatchGifts(battlesRef.current, eventsRef.current, giftsToProcess);
-      setBattles(result.updatedBattles);
-      setBattleEvents(result.updatedEvents);
+      const result = simulateBatchGiftsFigures(figuresRef.current, eventsRef.current, giftsToProcess);
+      setFigures(result.updatedFigures);
+      setLiveEvents(result.updatedEvents);
 
-      // Fast frequency: 250ms to 550ms (averaging ~400ms = 2.5 gifts/second)
-      const nextDelay = 250 + Math.random() * 300;
+      // Fast frequency: 280ms to 520ms (averaging ~400ms = 2.5 gifts/sec)
+      const nextDelay = 280 + Math.random() * 240;
       timerId = setTimeout(runSimulationStep, nextDelay);
     };
 
-    // Start rapid simulation
     timerId = setTimeout(runSimulationStep, 250);
 
-    // Visibility / focus catch-up when user returns to observing the page
+    // Catch-up when user wakes device or returns to tab
     const handleCatchUpOnWake = () => {
       const now = Date.now();
       const lastSavedTime = parseInt(localStorage.getItem(STORAGE_KEYS.LAST_SIM_TIME) || '0', 10);
       const referenceTime = Math.max(lastSavedTime, lastTickTimeRef.current);
 
       if (now - referenceTime > 800) {
-        const catchUp = calculateElapsedCatchUp(battlesRef.current, eventsRef.current, referenceTime);
+        const catchUp = calculateElapsedCatchUpFigures(figuresRef.current, eventsRef.current, referenceTime);
         if (catchUp.giftsSimulated > 0) {
-          setBattles(catchUp.updatedBattles);
-          setBattleEvents(catchUp.updatedEvents);
+          setFigures(catchUp.updatedFigures);
+          setLiveEvents(catchUp.updatedEvents);
         }
       }
       lastTickTimeRef.current = now;
@@ -197,186 +168,63 @@ export default function App() {
     };
   }, []);
 
-  // True gifting action by real users
-  const handlePaymentSuccess = (teamId: string, amount: number) => {
+  // Handle real gift success via Flutterwave
+  const handleGiftSuccess = (figureId: string, amount: number) => {
     const validAmount = Math.max(100, Math.floor(Number(amount) || 0));
     if (isNaN(validAmount) || validAmount <= 0) return;
 
-    const activeBattle = battles[currentBattleIndex];
-    if (!activeBattle) return;
+    let targetFigureName = 'Nigerian Star';
+    let targetSectorLabel = 'Leaderboard';
+    let targetSector: LeaderboardFigure['sector'] = 'music';
 
-    const targetTeam = activeBattle.teams.find((t) => t.id === teamId);
-
-    // Update real battle balances
-    setBattles((prevBattles) => {
-      return prevBattles.map((b) => {
-        if (b.id !== activeBattle.id) return b;
-        const updatedTeams = b.teams.map((t) => {
-          if (t.id === teamId) {
-            return {
-              ...t,
-              totalBalance: t.totalBalance + validAmount,
-              fanCount: t.fanCount + 1
-            };
-          }
-          return t;
-        }) as [Team, Team];
-
+    // Update figure balance & fans in state (feeds both sector and Master leaderboard!)
+    setFigures((prevFigures) => {
+      return prevFigures.map((f) => {
+        if (f.id !== figureId) return f;
+        targetFigureName = f.name;
+        targetSectorLabel = f.sectorLabel;
+        targetSector = f.sector;
         return {
-          ...b,
-          teams: updatedTeams
+          ...f,
+          totalBalance: f.totalBalance + validAmount,
+          fanCount: f.fanCount + 1
         };
       });
     });
 
-    // Record verified real user activity event
-    const newEvt: FanActivityEvent = {
+    // Record verified supporter event
+    const newEvt: LiveGiftEvent = {
       id: `evt_real_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
       timestamp: Date.now(),
       fanName: 'You (Supporter)',
       amount: validAmount,
-      teamId: teamId,
-      teamName: targetTeam?.name || 'Star',
+      figureId,
+      figureName: targetFigureName,
+      sector: targetSector,
+      sectorLabel: targetSectorLabel,
       eventType: validAmount >= 5000 ? 'whale' : 'donation',
-      message: `Verified gift of ₦${validAmount.toLocaleString()} to ${targetTeam?.name || 'Star'}`
+      message: `Verified gift of ₦${validAmount.toLocaleString()} to ${targetFigureName}`
     };
 
-    setBattleEvents((prev) => ({
-      ...prev,
-      [activeBattle.id]: [newEvt, ...(prev[activeBattle.id] || []).slice(0, 39)]
-    }));
+    setLiveEvents((prev) => [newEvt, ...prev].slice(0, 50));
   };
-
-  // Swiping navigation
-  const handleSwipeLeft = () => {
-    setCurrentBattleIndex((prev) => (prev + 1) % battles.length);
-  };
-
-  const handleSwipeRight = () => {
-    setCurrentBattleIndex((prev) => (prev - 1 + battles.length) % battles.length);
-  };
-
-  const handleSelectBattle = (index: number) => {
-    if (index >= 0 && index < battles.length) {
-      setCurrentBattleIndex(index);
-    }
-  };
-
-  const activeBattle = battles[currentBattleIndex] || battles[0];
-  const activeEvents = battleEvents[activeBattle.id] || [];
-
-  // Distinct Fandoms data for the Leaderboard (aggregated across battles so each fandom appears once)
-  const fandomMap = new Map<string, FandomLeaderboardItem>();
-
-  battles.forEach((b) => {
-    b.teams.forEach((t) => {
-      const fandomName =
-        t.tag === 'OUTSIDERS' ? 'Outsiders'
-        : t.tag === '30BG' ? '30 Billion Gang'
-        : t.tag === 'SABI GIRLS' ? 'Sabi Girls'
-        : t.tag === 'SAVAGE ARMY' ? 'Savage Army'
-        : t.tag === 'STARBOY' ? 'Starboy FC'
-        : t.tag === 'BARBZ' ? 'Barbz'
-        : t.tag === 'BARDI' ? 'Bardi Gang'
-        : t.tag === 'TITANS' ? 'Titans'
-        : t.tag === 'MERCENARIES' ? 'Mercenaries'
-        : `${t.name} Fandom`;
-
-      const existing = fandomMap.get(t.id);
-      if (existing) {
-        fandomMap.set(t.id, {
-          ...existing,
-          totalBalance: existing.totalBalance + t.totalBalance,
-          championshipWins: Math.max(existing.championshipWins, t.championshipWins),
-          fanCount: existing.fanCount + t.fanCount
-        });
-      } else {
-        fandomMap.set(t.id, {
-          ...t,
-          battleId: b.id,
-          battleTitle: b.title,
-          fandomName
-        });
-      }
-    });
-  });
-
-  const fandoms: FandomLeaderboardItem[] = Array.from(fandomMap.values());
 
   return (
-    <div className="min-h-screen bg-[#06070c] text-white selection:bg-amber-500 selection:text-black p-2.5 sm:p-6 flex flex-col items-center justify-center relative">
-      
-      {/* Top Header Bar: Placed at the top-left above the battle arena so it never obstructs the percentage value */}
-      {!showLeaderboard && (
-        <header className="w-full max-w-[480px] flex items-center justify-between px-1 mb-2.5">
-          <button
-            type="button"
-            onClick={() => setShowLeaderboard(true)}
-            aria-label="View Fandom Leaderboard"
-            className="flex items-center gap-2 bg-[#0b0c16] hover:bg-[#15182a] border border-amber-500/50 hover:border-amber-400 text-amber-400 px-3 py-1.5 rounded-xl shadow-md transition-all cursor-pointer group active:scale-95"
-          >
-            <Trophy className="w-4 h-4 text-amber-400 group-hover:scale-110 transition-transform" />
-            <span className="text-xs font-black tracking-wider text-amber-300">
-              LEADERBOARD
-            </span>
-          </button>
-
-          {/* Quick Battle Navigation Controls */}
-          <div className="flex items-center gap-1.5 bg-[#0b0c16] border border-[#1e2238] px-2 py-1 rounded-xl">
-            <button
-              type="button"
-              onClick={handleSwipeRight}
-              aria-label="Previous Battle"
-              className="text-slate-400 hover:text-white p-0.5 transition-colors cursor-pointer"
-            >
-              <ChevronLeft className="w-3.5 h-3.5" />
-            </button>
-            <span className="text-[11px] font-bold text-slate-300 tracking-wider uppercase px-1">
-              {currentBattleIndex + 1} / {battles.length}
-            </span>
-            <button
-              type="button"
-              onClick={handleSwipeLeft}
-              aria-label="Next Battle"
-              className="text-slate-400 hover:text-white p-0.5 transition-colors cursor-pointer"
-            >
-              <ChevronRight className="w-3.5 h-3.5" />
-            </button>
-          </div>
-        </header>
-      )}
-
-      <main className="w-full flex justify-center">
-        {showLeaderboard ? (
-          <LeaderboardView
-            fandoms={fandoms}
-            onBack={() => setShowLeaderboard(false)}
-            onSelectBattle={(battleId) => {
-              const idx = battles.findIndex((b) => b.id === battleId);
-              if (idx !== -1) {
-                setCurrentBattleIndex(idx);
-              }
-              setShowLeaderboard(false);
-            }}
-          />
-        ) : (
-          <PvPBattleDashboard
-            key={activeBattle.id}
-            battleId={activeBattle.id}
-            battleTitle={activeBattle.title}
-            battleSubtitle={activeBattle.subtitle}
-            battleCategory={activeBattle.category}
-            teams={activeBattle.teams}
-            onPaymentSuccess={handlePaymentSuccess}
-            recentEvents={activeEvents}
-            currentIndex={currentBattleIndex}
-            totalBattles={battles.length}
-            onSwipeLeft={handleSwipeLeft}
-            onSwipeRight={handleSwipeRight}
-            onSelectBattle={handleSelectBattle}
-          />
-        )}
+    <div className="min-h-screen bg-[#06070c] text-white selection:bg-amber-500 selection:text-black">
+      <main className="w-full">
+        <LeaderboardDashboard
+          figures={figures}
+          liveEvents={liveEvents}
+          onSelectFigureToGift={(figure) => setSelectedFigureToGift(figure)}
+        />
       </main>
+
+      {/* Gifting Modal with Flutterwave checkout */}
+      <GiftingModal
+        figure={selectedFigureToGift}
+        onClose={() => setSelectedFigureToGift(null)}
+        onGiftSuccess={handleGiftSuccess}
+      />
     </div>
   );
 }

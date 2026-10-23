@@ -17,13 +17,18 @@
     "noFallthroughCasesInSwitch": true
   },
   "include": [
+    "src/vite-env.d.ts",
     "src/App.tsx",
     "src/main.tsx",
-    "src/types",
-    "src/utils",
-    "src/data",
-    "src/components/PvPBattleDashboard.tsx",
-    "src/components/LeaderboardView.tsx",
+    "src/types/leaderboard.ts",
+    "src/types/game.ts",
+    "src/data/leaderboardData.ts",
+    "src/components/LeaderboardDashboard.tsx",
+    "src/components/GiftingModal.tsx",
+    "src/utils/audio.ts",
+    "src/utils/confetti.ts",
+    "src/utils/flutterwave.ts",
+    "src/utils/simulation.ts",
     "server.ts"
   ]
 }

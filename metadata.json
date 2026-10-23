@@ -1,6 +1,6 @@
 {
   "name": "FanWars",
-  "description": "FanWars — Live Head-to-Head Fan Battles and Real-Time Gifting.",
+  "description": "FanWars — Live Nigerian Celebrity Leaderboards & Real-Time Gifting.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }
