@@ -602,7 +602,7 @@ const NIGERIAN_FAN_NAMES = [
   'Regha_Critique', 'Ravers_Amina', 'SabiGirl_Blessing', 'Icons_Chidi', 'Machala_Burna',
   'Nollywood_Fan', 'Tao_Army', 'Shaggi_Swagger', 'DrinkWater_Aproko',
   'Pooja_Sports', 'Phynation', 'Baye_Tribe', 'KieKie_Glam',
-  'Genny_Icon', 'RMD_Classic', 'Ololade_Asake'
+  'Genny_Icon', 'RMD_Classic', 'Ololade_Asake', 'Zanku_General', 'DaSilva_Lagos'
 ];
 
 let serverGiftTimer: NodeJS.Timeout | null = null;

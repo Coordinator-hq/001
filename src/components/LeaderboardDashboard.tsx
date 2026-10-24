@@ -233,7 +233,7 @@ export const LeaderboardDashboard: React.FC<LeaderboardDashboardProps> = ({
                 <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-black ${
                   isActive ? 'bg-black text-amber-300' : 'bg-amber-500/20 text-amber-300'
                 }`}>
-                  TOP 60
+                  TOP {figures.length}
                 </span>
               )}
             </button>

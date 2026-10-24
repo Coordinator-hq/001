@@ -13,7 +13,7 @@ export const SECTOR_CONFIGS: SectorMeta[] = [
     id: 'master',
     label: 'Master Leaderboard',
     icon: 'Trophy',
-    description: 'Overall Top 60 Nigerian Icons Across All Industries',
+    description: 'Overall Top Nigerian Icons Across All Industries',
     color: '#F59E0B'
   },
   {
@@ -211,6 +211,21 @@ export const INITIAL_FIGURES: LeaderboardFigure[] = [
     accentColor: '#FDE047',
     totalBalance: 228000,
     fanCount: 410,
+    verified: true
+  },
+  {
+    id: 'zlatan_ibile',
+    name: 'Zlatan Ibile',
+    sector: 'music',
+    sectorLabel: 'Music',
+    tag: 'ZANKU',
+    fandomName: 'Zanku Nation',
+    slogan: 'World President / Kapaichidomarichidipaco',
+    avatarUrl: '/images/celebrities/zlatan_ibile.jpg',
+    primaryColor: '#10B981',
+    accentColor: '#34D399',
+    totalBalance: 265000,
+    fanCount: 468,
     verified: true
   },
 
@@ -515,6 +530,21 @@ export const INITIAL_FIGURES: LeaderboardFigure[] = [
     accentColor: '#34D399',
     totalBalance: 185000,
     fanCount: 320,
+    verified: true
+  },
+  {
+    id: 'sir_leo_dasilva',
+    name: 'Sirleobdasilva',
+    sector: 'x_influencers',
+    sectorLabel: 'X Influencers',
+    tag: 'DASILVA',
+    fandomName: 'DaSilva Tribe',
+    slogan: 'Strategist & Thought Leader',
+    avatarUrl: '/images/celebrities/sir_leo_dasilva.jpg',
+    primaryColor: '#0EA5E9',
+    accentColor: '#38BDF8',
+    totalBalance: 295000,
+    fanCount: 515,
     verified: true
   },
 
