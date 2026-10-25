@@ -11,15 +11,15 @@ import { INITIAL_FIGURES } from './data/leaderboardData';
 import { soundManager } from './utils/audio';
 
 const STORAGE_KEYS = {
-  FIGURES: 'fanwars_figures_master_v4',
-  EVENTS: 'fanwars_live_events_v4'
+  FIGURES: 'fanwars_figures_master_v5',
+  EVENTS: 'fanwars_live_events_v5'
 };
 
 function getInitialLocalState(): {
   figures: LeaderboardFigure[];
   events: LiveGiftEvent[];
 } {
-  let loadedFigures: LeaderboardFigure[] = INITIAL_FIGURES;
+  let loadedFigures: LeaderboardFigure[] = INITIAL_FIGURES.filter((f) => f.id !== 'mazi_ezenmore');
   let loadedEvents: LiveGiftEvent[] = [];
 
   const savedFigures = localStorage.getItem(STORAGE_KEYS.FIGURES);
@@ -27,7 +27,7 @@ function getInitialLocalState(): {
     try {
       const parsed = JSON.parse(savedFigures);
       if (Array.isArray(parsed) && parsed.length >= 10) {
-        loadedFigures = INITIAL_FIGURES.map((initFig) => {
+        loadedFigures = INITIAL_FIGURES.filter((f) => f.id !== 'mazi_ezenmore').map((initFig) => {
           const saved = parsed.find((p: LeaderboardFigure) => p.id === initFig.id);
           if (!saved) return initFig;
           return {
@@ -51,7 +51,7 @@ function getInitialLocalState(): {
     try {
       const parsedEvts = JSON.parse(savedEvents);
       if (Array.isArray(parsedEvts)) {
-        loadedEvents = parsedEvts;
+        loadedEvents = parsedEvts.filter((e: LiveGiftEvent) => e.figureId !== 'mazi_ezenmore');
       }
     } catch (e) {
       console.error('Failed to parse saved events:', e);
@@ -59,8 +59,8 @@ function getInitialLocalState(): {
   }
 
   return {
-    figures: loadedFigures,
-    events: loadedEvents
+    figures: loadedFigures.filter((f) => f.id !== 'mazi_ezenmore'),
+    events: loadedEvents.filter((e) => e.figureId !== 'mazi_ezenmore')
   };
 }
 

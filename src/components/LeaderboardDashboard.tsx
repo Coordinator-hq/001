@@ -250,9 +250,14 @@ export const LeaderboardDashboard: React.FC<LeaderboardDashboardProps> = ({
           </div>
 
           <div className="overflow-hidden whitespace-nowrap relative w-full text-xs text-slate-300 flex items-center gap-4">
-            <div className="flex items-center gap-6 animate-pulse">
-              {liveEvents.slice(0, 3).map((evt) => (
-                <div key={evt.id} className="inline-flex items-center gap-1.5 text-[11px] font-extrabold uppercase">
+            <div className="flex items-center gap-6">
+              {liveEvents.slice(0, 4).map((evt, i) => (
+                <div key={evt.id} className="inline-flex items-center gap-1.5 text-[11px] font-extrabold uppercase shrink-0">
+                  {i === 0 && (
+                    <span className="text-[8px] font-black bg-amber-500 text-black px-1.5 py-0.2 rounded-full shadow-[0_0_10px_rgba(245,158,11,0.5)]">
+                      NEW
+                    </span>
+                  )}
                   <span className="font-black text-white">{evt.fanName}</span>
                   <span className="text-slate-500 text-[10px]">GIFTED</span>
                   <span className="font-black text-amber-300">₦{evt.amount.toLocaleString()}</span>

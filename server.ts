@@ -378,11 +378,13 @@ app.post('/api/verify-payment', paymentRateLimiter, async (req, res) => {
       });
     }
 
-    // 2. Gateway Verification (when Flutterwave secret key is configured and not an explicit sandbox test)
+    const isSimulated = Boolean(req.body.is_simulated || strTxId.startsWith('FLW_SANDBOX_'));
+
+    // 2. Gateway Verification (when Flutterwave secret key is configured and not an explicit simulated/sandbox gift)
     let verifiedAmount = numericAmount;
     const flutterwaveSecret = process.env.FLUTTERWAVE_SECRET_KEY;
 
-    if (flutterwaveSecret && !strTxId.startsWith('FLW_SANDBOX_')) {
+    if (flutterwaveSecret && !isSimulated) {
       const flwResponse = await fetch(`https://api.flutterwave.com/v3/transactions/${strTxId}/verify`, {
         method: 'GET',
         headers: {
@@ -451,7 +453,7 @@ app.post('/api/verify-payment', paymentRateLimiter, async (req, res) => {
 
     // 5. Create Verified Live Event
     const verifiedEvent: LiveGiftEvent = {
-      id: `evt_real_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+      id: `evt_${isSimulated ? 'sim' : 'real'}_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
       timestamp: Date.now(),
       fanName: cleanDonor,
       amount: verifiedAmount,
@@ -460,7 +462,7 @@ app.post('/api/verify-payment', paymentRateLimiter, async (req, res) => {
       sector: figure.sector,
       sectorLabel: figure.sectorLabel,
       eventType: verifiedAmount >= 5000 ? 'whale' : 'donation',
-      message: `Verified gift of ₦${verifiedAmount.toLocaleString()} to ${figure.name}`
+      message: `${isSimulated ? 'Simulated' : 'Verified'} gift of ₦${verifiedAmount.toLocaleString()} to ${figure.name}`
     };
 
     recentEvents = [verifiedEvent, ...recentEvents.slice(0, 49)];
@@ -470,16 +472,18 @@ app.post('/api/verify-payment', paymentRateLimiter, async (req, res) => {
       type: 'PAYMENT_VERIFIED',
       event: verifiedEvent,
       figureId: figure.id,
+      isSimulated,
       updatedFigure: figure,
       figures: getAllFiguresSorted(),
       totalPot: calculateTotalPot(),
       timestamp: Date.now()
     });
 
-    console.log(`[FanBrawl Server] Verified real gift: ₦${verifiedAmount.toLocaleString()} to ${figure.name} by ${cleanDonor}`);
+    console.log(`[FanBrawl Server] Verified ${isSimulated ? 'simulated' : 'real'} gift: ₦${verifiedAmount.toLocaleString()} to ${figure.name} by ${cleanDonor}`);
 
     return res.json({
       verified: true,
+      is_simulated: isSimulated,
       transaction_id: strTxId,
       tx_ref: strTxRef,
       amount: verifiedAmount,
@@ -487,7 +491,9 @@ app.post('/api/verify-payment', paymentRateLimiter, async (req, res) => {
       figure_name: figure.name,
       new_total_balance: figure.totalBalance,
       timestamp: Date.now(),
-      message: 'Payment verified and credited on the master leaderboard.'
+      message: isSimulated
+        ? 'Simulated gift credited on the master leaderboard.'
+        : 'Payment verified and credited on the master leaderboard.'
     });
   } catch (error) {
     console.error('[FanBrawl Backend] Payment verification exception:', error);

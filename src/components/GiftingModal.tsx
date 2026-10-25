@@ -43,6 +43,7 @@ export const GiftingModal: React.FC<GiftingModalProps> = ({
     setErrorMessage(null);
   };
 
+  // Real payment flow via Flutterwave gateway
   const handleInitiateGift = () => {
     if (activeAmount < MIN_GIFT_AMOUNT || activeAmount > MAX_GIFT_AMOUNT) {
       setErrorMessage(`GIFT AMOUNT MUST BE BETWEEN ₦${MIN_GIFT_AMOUNT.toLocaleString()} AND ₦${MAX_GIFT_AMOUNT.toLocaleString()}`);
@@ -67,7 +68,6 @@ export const GiftingModal: React.FC<GiftingModalProps> = ({
         setStatusMessage('VERIFYING WITH FLUTTERWAVE & CREDITING MASTER LEADERBOARD...');
 
         try {
-          // Call Server-Authoritative Verification Endpoint
           const response = await fetch('/api/verify-payment', {
             method: 'POST',
             headers: {
@@ -269,7 +269,7 @@ export const GiftingModal: React.FC<GiftingModalProps> = ({
             </div>
           )}
 
-          {/* Checkout CTA */}
+          {/* Checkout CTA: Icon-Only Button */}
           <button
             type="button"
             disabled={isProcessing || activeAmount < MIN_GIFT_AMOUNT}

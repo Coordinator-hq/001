@@ -488,21 +488,6 @@ export const INITIAL_FIGURES: LeaderboardFigure[] = [
     verified: true
   },
   {
-    id: 'mazi_ezenmore',
-    name: 'Mazi Ezenmore',
-    sector: 'x_influencers',
-    sectorLabel: 'X Influencers',
-    tag: 'MAZI',
-    fandomName: 'Mazi Tribe',
-    slogan: 'Nigerian Cultural Commentary',
-    avatarUrl: '/images/celebrities/mazi_ezenmore.jpg',
-    primaryColor: '#EA580C',
-    accentColor: '#FB923C',
-    totalBalance: 215000,
-    fanCount: 370,
-    verified: true
-  },
-  {
     id: 'four_eyed_bro',
     name: 'Four-eyed Bro',
     sector: 'x_influencers',
