@@ -11,8 +11,8 @@ import { INITIAL_FIGURES } from './data/leaderboardData';
 import { soundManager } from './utils/audio';
 
 const STORAGE_KEYS = {
-  FIGURES: 'fanwars_figures_master_v5',
-  EVENTS: 'fanwars_live_events_v5'
+  FIGURES: 'fanwars_figures_master_v7',
+  EVENTS: 'fanwars_live_events_v7'
 };
 
 function getInitialLocalState(): {

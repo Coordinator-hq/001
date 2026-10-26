@@ -7,7 +7,7 @@ export const NIGERIAN_FAN_NAMES = [
   'Nollywood_Enthusiast', 'Tao_Army_Zainab', 'Shaggi_Swagger_Femi', 'DrinkWater_Aproko',
   'Pooja_Sports_Ngozi', 'Phynation_Ibrahim', 'Baye_Tribe_Faith', 'KieKie_Glam_Dami',
   'Genny_Icon_Kola', 'RMD_Classic_Emeka', 'Ololade_Vibe_Yomi', 'BrainJotter_Fan',
-  'Zanku_General', 'DaSilva_Lagos'
+  'Zanku_General', 'DaSilva_Lagos', 'Basketmouth_Ribs', 'AY_Live_VIP', 'Bovi_Fire_Fan', 'Macaroni_Ooin'
 ];
 
 /**

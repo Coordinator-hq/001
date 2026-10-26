@@ -2,6 +2,7 @@ export type SectorCategory =
   | 'master'
   | 'music'
   | 'movies'
+  | 'comedy'
   | 'x_influencers'
   | 'instagram_influencers'
   | 'tiktok_influencers'

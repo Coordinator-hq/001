@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, Gift, Flame, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
 import { TwitterVerifiedBadge } from './TwitterVerifiedBadge';
+import { CelebrityAvatar } from './CelebrityAvatar';
 import { LeaderboardFigure } from '../types/leaderboard';
 import { initiateFlutterwavePayment, MIN_GIFT_AMOUNT, MAX_GIFT_AMOUNT } from '../utils/flutterwave';
 import { soundManager } from '../utils/audio';
@@ -132,14 +133,11 @@ export const GiftingModal: React.FC<GiftingModalProps> = ({
         >
           <div className="flex items-center gap-3">
             <div className="relative">
-              <img
+              <CelebrityAvatar
                 src={figure.avatarUrl}
-                alt={figure.name}
-                className="w-13 h-13 rounded-2xl object-cover border-2 shadow-lg"
-                style={{ borderColor: figure.primaryColor }}
-                onError={(e) => {
-                  (e.target as HTMLElement).style.display = 'none';
-                }}
+                name={figure.name}
+                className="w-13 h-13 rounded-2xl border-2 shadow-lg"
+                borderColor={figure.primaryColor}
               />
               <span 
                 className="absolute -bottom-1 -right-1 text-[9px] font-black uppercase px-1.5 py-0.5 rounded-full text-white shadow"

@@ -14,10 +14,12 @@ import {
   Search,
   TrendingUp,
   Radio,
+  Laugh,
   ChevronLeft,
   ChevronRight
 } from 'lucide-react';
 import { TwitterVerifiedBadge } from './TwitterVerifiedBadge';
+import { CelebrityAvatar } from './CelebrityAvatar';
 import { LeaderboardFigure, SectorCategory, LiveGiftEvent } from '../types/leaderboard';
 import { SECTOR_CONFIGS } from '../data/leaderboardData';
 
@@ -189,6 +191,8 @@ export const LeaderboardDashboard: React.FC<LeaderboardDashboardProps> = ({
         return <Video className={className} />;
       case 'Eye':
         return <Eye className={className} />;
+      case 'Laugh':
+        return <Laugh className={className} />;
       default:
         return <Trophy className={className} />;
     }
@@ -332,13 +336,10 @@ export const LeaderboardDashboard: React.FC<LeaderboardDashboardProps> = ({
               </div>
 
               <div className="relative my-2">
-                <img
+                <CelebrityAvatar
                   src={top2.avatarUrl}
-                  alt={top2.name}
-                  className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl object-cover border-2 border-slate-400 shadow-md group-hover:scale-105 transition-transform"
-                  onError={(e) => {
-                    (e.target as HTMLElement).style.display = 'none';
-                  }}
+                  name={top2.name}
+                  className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl border-2 border-slate-400 shadow-md group-hover:scale-105 transition-transform"
                 />
               </div>
 
@@ -379,13 +380,10 @@ export const LeaderboardDashboard: React.FC<LeaderboardDashboardProps> = ({
               </div>
 
               <div className="relative my-2">
-                <img
+                <CelebrityAvatar
                   src={top1.avatarUrl}
-                  alt={top1.name}
-                  className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl object-cover border-2 border-amber-400 shadow-[0_0_20px_rgba(245,158,11,0.4)] group-hover:scale-105 transition-transform"
-                  onError={(e) => {
-                    (e.target as HTMLElement).style.display = 'none';
-                  }}
+                  name={top1.name}
+                  className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl border-2 border-amber-400 shadow-[0_0_20px_rgba(245,158,11,0.4)] group-hover:scale-105 transition-transform"
                 />
               </div>
 
@@ -426,13 +424,10 @@ export const LeaderboardDashboard: React.FC<LeaderboardDashboardProps> = ({
               </div>
 
               <div className="relative my-2">
-                <img
+                <CelebrityAvatar
                   src={top3.avatarUrl}
-                  alt={top3.name}
-                  className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl object-cover border-2 border-amber-700 shadow-md group-hover:scale-105 transition-transform"
-                  onError={(e) => {
-                    (e.target as HTMLElement).style.display = 'none';
-                  }}
+                  name={top3.name}
+                  className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl border-2 border-amber-700 shadow-md group-hover:scale-105 transition-transform"
                 />
               </div>
 
@@ -494,13 +489,10 @@ export const LeaderboardDashboard: React.FC<LeaderboardDashboardProps> = ({
                 {/* Figure Avatar & Metadata */}
                 <div className="flex items-center gap-2.5 sm:gap-3 flex-1 min-w-0">
                   <div className="relative shrink-0">
-                    <img
+                    <CelebrityAvatar
                       src={row.avatarUrl}
-                      alt={row.name}
-                      className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl object-cover border border-[#262c4a] group-hover:border-amber-400/80 transition-all"
-                      onError={(e) => {
-                        (e.target as HTMLElement).style.display = 'none';
-                      }}
+                      name={row.name}
+                      className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl border border-[#262c4a] group-hover:border-amber-400/80 transition-all"
                     />
                     {isTop5 && (
                       <span className="absolute -bottom-1 -right-1 text-[8px] font-black bg-amber-500 text-black px-1 rounded-full uppercase">
