@@ -11,15 +11,15 @@ import { INITIAL_FIGURES } from './data/leaderboardData';
 import { soundManager } from './utils/audio';
 
 const STORAGE_KEYS = {
-  FIGURES: 'fanwars_figures_master_v7',
-  EVENTS: 'fanwars_live_events_v7'
+  FIGURES: 'fanwars_figures_100_real_v1',
+  EVENTS: 'fanwars_events_100_real_v1'
 };
 
 function getInitialLocalState(): {
   figures: LeaderboardFigure[];
   events: LiveGiftEvent[];
 } {
-  let loadedFigures: LeaderboardFigure[] = INITIAL_FIGURES.filter((f) => f.id !== 'mazi_ezenmore');
+  let loadedFigures: LeaderboardFigure[] = [...INITIAL_FIGURES];
   let loadedEvents: LiveGiftEvent[] = [];
 
   const savedFigures = localStorage.getItem(STORAGE_KEYS.FIGURES);
@@ -27,7 +27,7 @@ function getInitialLocalState(): {
     try {
       const parsed = JSON.parse(savedFigures);
       if (Array.isArray(parsed) && parsed.length >= 10) {
-        loadedFigures = INITIAL_FIGURES.filter((f) => f.id !== 'mazi_ezenmore').map((initFig) => {
+        loadedFigures = INITIAL_FIGURES.map((initFig) => {
           const saved = parsed.find((p: LeaderboardFigure) => p.id === initFig.id);
           if (!saved) return initFig;
           return {
@@ -51,7 +51,7 @@ function getInitialLocalState(): {
     try {
       const parsedEvts = JSON.parse(savedEvents);
       if (Array.isArray(parsedEvts)) {
-        loadedEvents = parsedEvts.filter((e: LiveGiftEvent) => e.figureId !== 'mazi_ezenmore');
+        loadedEvents = parsedEvts;
       }
     } catch (e) {
       console.error('Failed to parse saved events:', e);
@@ -59,8 +59,8 @@ function getInitialLocalState(): {
   }
 
   return {
-    figures: loadedFigures.filter((f) => f.id !== 'mazi_ezenmore'),
-    events: loadedEvents.filter((e) => e.figureId !== 'mazi_ezenmore')
+    figures: loadedFigures,
+    events: loadedEvents
   };
 }
 
@@ -148,24 +148,6 @@ export default function App() {
                 if (data.event.amount >= 5000) {
                   soundManager.playLevelUp();
                 }
-              }
-            } else if (data.type === 'STREAM_TICK') {
-              // Server heartbeat simulated gift keeping the leaderboard alive across all clients
-              if (data.figureId) {
-                setFigures((prev) =>
-                  prev.map((f) => {
-                    if (f.id !== data.figureId) return f;
-                    return {
-                      ...f,
-                      totalBalance: data.newBalance || f.totalBalance + data.event.amount,
-                      fanCount: data.newFanCount || f.fanCount + 1
-                    };
-                  })
-                );
-              }
-
-              if (data.event) {
-                setLiveEvents((prev) => [data.event, ...prev].slice(0, 50));
               }
             }
           } catch (parseError) {
@@ -255,6 +237,7 @@ export default function App() {
       {/* Gifting Modal with Flutterwave checkout and Server Verification */}
       <GiftingModal
         figure={selectedFigureToGift}
+        allFigures={figures}
         onClose={() => setSelectedFigureToGift(null)}
         onGiftSuccess={handleGiftSuccess}
       />

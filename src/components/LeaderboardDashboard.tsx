@@ -15,6 +15,9 @@ import {
   TrendingUp,
   Radio,
   Laugh,
+  Sparkles,
+  Youtube,
+  Mic,
   ChevronLeft,
   ChevronRight
 } from 'lucide-react';
@@ -193,6 +196,12 @@ export const LeaderboardDashboard: React.FC<LeaderboardDashboardProps> = ({
         return <Eye className={className} />;
       case 'Laugh':
         return <Laugh className={className} />;
+      case 'Sparkles':
+        return <Sparkles className={className} />;
+      case 'Youtube':
+        return <Youtube className={className} />;
+      case 'Mic':
+        return <Mic className={className} />;
       default:
         return <Trophy className={className} />;
     }
@@ -246,13 +255,13 @@ export const LeaderboardDashboard: React.FC<LeaderboardDashboardProps> = ({
       </nav>
 
       {/* Live Activity Stream Marquee / Ticker */}
-      {liveEvents.length > 0 && (
-        <div className="mb-4 bg-[#0a0c16] border border-[#1b2038] rounded-2xl p-2.5 overflow-hidden flex items-center gap-3">
-          <div className="flex items-center gap-1.5 text-[11px] font-black uppercase text-amber-400 bg-amber-500/10 px-2 py-1 rounded-xl flex-shrink-0 tracking-wider">
-            <Radio className="w-3 h-3 text-amber-400 animate-pulse" />
-            <span className="hidden xs:inline">LATEST GIFTS</span>
-          </div>
+      <div className="mb-4 bg-[#0a0c16] border border-[#1b2038] rounded-2xl p-2.5 overflow-hidden flex items-center gap-3">
+        <div className="flex items-center gap-1.5 text-[11px] font-black uppercase text-amber-400 bg-amber-500/10 px-2.5 py-1 rounded-xl flex-shrink-0 tracking-wider">
+          <Radio className="w-3 h-3 text-amber-400 animate-pulse" />
+          <span className="hidden xs:inline">LIVE STATUS</span>
+        </div>
 
+        {liveEvents.length > 0 ? (
           <div className="overflow-hidden whitespace-nowrap relative w-full text-xs text-slate-300 flex items-center gap-4">
             <div className="flex items-center gap-6">
               {liveEvents.slice(0, 4).map((evt, i) => (
@@ -274,8 +283,14 @@ export const LeaderboardDashboard: React.FC<LeaderboardDashboardProps> = ({
               ))}
             </div>
           </div>
-        </div>
-      )}
+        ) : (
+          <div className="text-[11px] font-bold uppercase text-slate-400 flex items-center gap-2 truncate tracking-wider">
+            <span className="text-amber-400 font-black">REAL-TIME LEADERBOARD ACTIVE</span>
+            <span className="text-slate-600 hidden sm:inline">•</span>
+            <span className="hidden sm:inline">SEND A GIFT TO PLACE YOUR FAVORITE CREATOR AT THE TOP!</span>
+          </div>
+        )}
+      </div>
 
       {/* Sector Header Banner & Search */}
       <div className="bg-[#0d1020] border border-[#1e233d] rounded-2xl mb-5 shadow-lg overflow-hidden">

@@ -2,6 +2,7 @@ import express, { Request, Response } from 'express';
 import { createServer as createViteServer } from 'vite';
 import http from 'http';
 import path from 'path';
+import fs from 'fs';
 import { INITIAL_FIGURES } from './src/data/leaderboardData.ts';
 import { LeaderboardFigure, LiveGiftEvent } from './src/types/leaderboard.ts';
 
@@ -116,47 +117,74 @@ if (pruneIdempotencyInterval.unref) {
 // -------------------------------------------------------------
 const masterFigures: Map<string, LeaderboardFigure> = new Map();
 INITIAL_FIGURES.forEach((fig) => {
-  masterFigures.set(fig.id, { ...fig });
+  masterFigures.set(fig.id, { ...fig, totalBalance: 0, fanCount: 0 });
 });
 
-let recentEvents: LiveGiftEvent[] = [
-  {
-    id: `evt_init_${Date.now() - 3000}`,
-    timestamp: Date.now() - 3000,
-    fanName: '30BG_Tunde',
-    amount: 5000,
-    figureId: 'davido',
-    figureName: 'Davido',
-    sector: 'music',
-    sectorLabel: 'Music',
-    eventType: 'whale',
-    message: 'Verified gift of ₦5,000 to Davido'
-  },
-  {
-    id: `evt_init_${Date.now() - 7000}`,
-    timestamp: Date.now() - 7000,
-    fanName: 'Wizkid_FC_Amina',
-    amount: 2000,
-    figureId: 'wizkid',
-    figureName: 'Wizkid',
-    sector: 'music',
-    sectorLabel: 'Music',
-    eventType: 'donation',
-    message: 'Verified gift of ₦2,000 to Wizkid'
-  },
-  {
-    id: `evt_init_${Date.now() - 12000}`,
-    timestamp: Date.now() - 12000,
-    fanName: 'Investor_Sabinus_Fan',
-    amount: 1000,
-    figureId: 'sabinus',
-    figureName: 'Sabinus',
-    sector: 'instagram_influencers',
-    sectorLabel: 'Instagram',
-    eventType: 'donation',
-    message: 'Verified gift of ₦1,000 to Sabinus'
+// Strictly Authentic Live Gift Events Ledger: Starts completely empty
+let recentEvents: LiveGiftEvent[] = [];
+
+// Persistence file for verified real transactions
+const DATA_DIR = path.join(process.cwd(), 'data');
+const STORE_FILE = path.join(DATA_DIR, 'real_leaderboard_store.json');
+
+function loadPersistedRealState() {
+  try {
+    if (fs.existsSync(STORE_FILE)) {
+      const data = JSON.parse(fs.readFileSync(STORE_FILE, 'utf-8'));
+      if (data.figures && typeof data.figures === 'object') {
+        for (const [id, savedFig] of Object.entries(data.figures)) {
+          const fig = masterFigures.get(id);
+          if (fig && typeof savedFig === 'object' && savedFig !== null) {
+            fig.totalBalance = Number((savedFig as any).totalBalance) || 0;
+            fig.fanCount = Number((savedFig as any).fanCount) || 0;
+          }
+        }
+      }
+      if (Array.isArray(data.events)) {
+        recentEvents = data.events;
+      }
+      if (Array.isArray(data.redeemed)) {
+        for (const [k, v] of data.redeemed) {
+          redeemedTransactions.set(k, v);
+        }
+      }
+      console.log(`[FanBrawl Store] Loaded persisted real state. Active events: ${recentEvents.length}`);
+    }
+  } catch (err) {
+    console.error('[FanBrawl Store] Error loading persisted real state:', err);
   }
-];
+}
+
+function savePersistedRealState() {
+  try {
+    if (!fs.existsSync(DATA_DIR)) {
+      fs.mkdirSync(DATA_DIR, { recursive: true });
+    }
+    const figuresState: Record<string, { totalBalance: number; fanCount: number }> = {};
+    for (const [id, fig] of masterFigures.entries()) {
+      if (fig.totalBalance > 0 || fig.fanCount > 0) {
+        figuresState[id] = { totalBalance: fig.totalBalance, fanCount: fig.fanCount };
+      }
+    }
+    fs.writeFileSync(
+      STORE_FILE,
+      JSON.stringify(
+        {
+          figures: figuresState,
+          events: recentEvents.slice(0, 50),
+          redeemed: Array.from(redeemedTransactions.entries()).slice(-1000)
+        },
+        null,
+        2
+      )
+    );
+  } catch (err) {
+    console.error('[FanBrawl Store] Error saving persisted real state:', err);
+  }
+}
+
+// Load persisted state on startup
+loadPersistedRealState();
 
 function getAllFiguresSorted(): LeaderboardFigure[] {
   return Array.from(masterFigures.values()).sort((a, b) => b.totalBalance - a.totalBalance);
@@ -312,7 +340,7 @@ app.get('/api/leaderboard', generalApiLimiter, (_req, res) => {
     figures,
     recentEvents: recentEvents.slice(0, 40),
     totalPot: calculateTotalPot(),
-    activeViewers: sseClients.size + 120,
+    activeViewers: Math.max(1, sseClients.size),
     timestamp: Date.now()
   });
 });
@@ -378,13 +406,11 @@ app.post('/api/verify-payment', paymentRateLimiter, async (req, res) => {
       });
     }
 
-    const isSimulated = Boolean(req.body.is_simulated || strTxId.startsWith('FLW_SANDBOX_'));
-
-    // 2. Gateway Verification (when Flutterwave secret key is configured and not an explicit simulated/sandbox gift)
+    // 2. Authoritative Gateway Verification via Flutterwave
     let verifiedAmount = numericAmount;
     const flutterwaveSecret = process.env.FLUTTERWAVE_SECRET_KEY;
 
-    if (flutterwaveSecret && !isSimulated) {
+    if (flutterwaveSecret) {
       const flwResponse = await fetch(`https://api.flutterwave.com/v3/transactions/${strTxId}/verify`, {
         method: 'GET',
         headers: {
@@ -451,9 +477,9 @@ app.post('/api/verify-payment', paymentRateLimiter, async (req, res) => {
     figure.totalBalance += verifiedAmount;
     figure.fanCount += 1;
 
-    // 5. Create Verified Live Event
+    // 5. Create Verified Real Live Event
     const verifiedEvent: LiveGiftEvent = {
-      id: `evt_${isSimulated ? 'sim' : 'real'}_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+      id: `evt_real_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
       timestamp: Date.now(),
       fanName: cleanDonor,
       amount: verifiedAmount,
@@ -462,28 +488,29 @@ app.post('/api/verify-payment', paymentRateLimiter, async (req, res) => {
       sector: figure.sector,
       sectorLabel: figure.sectorLabel,
       eventType: verifiedAmount >= 5000 ? 'whale' : 'donation',
-      message: `${isSimulated ? 'Simulated' : 'Verified'} gift of ₦${verifiedAmount.toLocaleString()} to ${figure.name}`
+      message: `Verified gift of ₦${verifiedAmount.toLocaleString()} to ${figure.name}`
     };
 
     recentEvents = [verifiedEvent, ...recentEvents.slice(0, 49)];
+
+    // Persist real verified state to disk
+    savePersistedRealState();
 
     // 6. Broadcast Real-Time Update to ALL Connected Concurrent Users
     broadcastToAllClients({
       type: 'PAYMENT_VERIFIED',
       event: verifiedEvent,
       figureId: figure.id,
-      isSimulated,
       updatedFigure: figure,
       figures: getAllFiguresSorted(),
       totalPot: calculateTotalPot(),
       timestamp: Date.now()
     });
 
-    console.log(`[FanBrawl Server] Verified ${isSimulated ? 'simulated' : 'real'} gift: ₦${verifiedAmount.toLocaleString()} to ${figure.name} by ${cleanDonor}`);
+    console.log(`[FanBrawl Server] Verified real gift: ₦${verifiedAmount.toLocaleString()} to ${figure.name} by ${cleanDonor}`);
 
     return res.json({
       verified: true,
-      is_simulated: isSimulated,
       transaction_id: strTxId,
       tx_ref: strTxRef,
       amount: verifiedAmount,
@@ -491,9 +518,7 @@ app.post('/api/verify-payment', paymentRateLimiter, async (req, res) => {
       figure_name: figure.name,
       new_total_balance: figure.totalBalance,
       timestamp: Date.now(),
-      message: isSimulated
-        ? 'Simulated gift credited on the master leaderboard.'
-        : 'Payment verified and credited on the master leaderboard.'
+      message: 'Payment verified and credited on the master leaderboard.'
     });
   } catch (error) {
     console.error('[FanBrawl Backend] Payment verification exception:', error);
@@ -557,6 +582,7 @@ app.post('/api/flutterwave-webhook', (req, res) => {
         };
 
         recentEvents = [webhookEvent, ...recentEvents.slice(0, 49)];
+        savePersistedRealState();
 
         broadcastToAllClients({
           type: 'PAYMENT_VERIFIED',
@@ -599,78 +625,6 @@ app.get('/api/health', (_req, res) => {
   });
 });
 
-// -------------------------------------------------------------
-// Server Background Ticker Engine (Synchronized for All Users)
-// -------------------------------------------------------------
-const NIGERIAN_FAN_NAMES = [
-  '30BG_Tunde', 'Outsider_Kelechi', 'Starboy_Segun', 'Titan_Chioma', 'Mercenary_Joy',
-  'Jenifa_Funke_Fan', 'Sabinus_Investor', 'Peller_Vibe', 'Lerry_FC',
-  'Regha_Critique', 'Ravers_Amina', 'SabiGirl_Blessing', 'Icons_Chidi', 'Machala_Burna',
-  'Nollywood_Fan', 'Tao_Army', 'Shaggi_Swagger', 'DrinkWater_Aproko',
-  'Pooja_Sports', 'Phynation', 'Baye_Tribe', 'KieKie_Glam',
-  'Genny_Icon', 'RMD_Classic', 'Ololade_Asake', 'Zanku_General', 'DaSilva_Lagos',
-  'Basketmouth_Ribs', 'AY_Live_VIP', 'Bovi_Fire_Fan', 'Macaroni_Ooin'
-];
-
-let serverGiftTimer: NodeJS.Timeout | null = null;
-
-function scheduleServerGiftTick() {
-  const nextDelay = 400 + Math.random() * 500;
-  serverGiftTimer = setTimeout(() => {
-    try {
-      const figureList = Array.from(masterFigures.values());
-      if (figureList.length > 0) {
-        const randFigure = figureList[Math.floor(Math.random() * figureList.length)];
-
-        const rand = Math.random();
-        let amount = 500;
-        if (rand < 0.01) amount = 100;
-        else if (rand < 0.03) amount = 200;
-        else if (rand < 0.45) amount = 500;
-        else if (rand < 0.75) amount = 1000;
-        else if (rand < 0.90) amount = 2000;
-        else if (rand < 0.97) amount = 5000;
-        else if (rand < 0.993) amount = 10000;
-        else amount = 20000;
-
-        randFigure.totalBalance += amount;
-        randFigure.fanCount += 1;
-
-        const fanName = NIGERIAN_FAN_NAMES[Math.floor(Math.random() * NIGERIAN_FAN_NAMES.length)];
-        const simEvt: LiveGiftEvent = {
-          id: `evt_srv_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
-          timestamp: Date.now(),
-          fanName,
-          amount,
-          figureId: randFigure.id,
-          figureName: randFigure.name,
-          sector: randFigure.sector,
-          sectorLabel: randFigure.sectorLabel,
-          eventType: amount >= 5000 ? 'whale' : 'donation',
-          message: `Gifted ₦${amount.toLocaleString()} to ${randFigure.name}`
-        };
-
-        recentEvents = [simEvt, ...recentEvents.slice(0, 49)];
-
-        broadcastToAllClients({
-          type: 'STREAM_TICK',
-          event: simEvt,
-          figureId: randFigure.id,
-          newBalance: randFigure.totalBalance,
-          newFanCount: randFigure.fanCount,
-          totalPot: calculateTotalPot(),
-          timestamp: Date.now()
-        });
-      }
-    } catch (e) {
-      console.error('[FanBrawl Engine] Tick error:', e);
-    }
-
-    scheduleServerGiftTick();
-  }, nextDelay);
-}
-
-scheduleServerGiftTick();
 
 // -------------------------------------------------------------
 // Server Initialization (Local Dev & Production Container)
@@ -716,7 +670,6 @@ async function startServer() {
   const shutdown = (signal: string) => {
     console.log(`[FanBrawl Server] Received ${signal}. Initiating graceful shutdown...`);
 
-    if (serverGiftTimer) clearTimeout(serverGiftTimer);
     clearInterval(heartbeatInterval);
     clearInterval(sweepInterval);
     clearInterval(pruneIdempotencyInterval);

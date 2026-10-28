@@ -3,10 +3,13 @@ export type SectorCategory =
   | 'music'
   | 'movies'
   | 'comedy'
+  | 'skits'
   | 'x_influencers'
   | 'instagram_influencers'
   | 'tiktok_influencers'
-  | 'bbnaija';
+  | 'bbnaija'
+  | 'youtube_tech'
+  | 'podcasts';
 
 export interface LeaderboardFigure {
   id: string;
@@ -22,6 +25,8 @@ export interface LeaderboardFigure {
   totalBalance: number;
   fanCount: number;
   verified?: boolean;
+  handle?: string;
+  bio?: string;
 }
 
 export interface LiveGiftEvent {
