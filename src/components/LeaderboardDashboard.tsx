@@ -14,6 +14,7 @@ import {
   Search,
   TrendingUp,
   Radio,
+  Heart,
   Laugh,
   Sparkles,
   Youtube,
@@ -198,6 +199,10 @@ export const LeaderboardDashboard: React.FC<LeaderboardDashboardProps> = ({
         return <Laugh className={className} />;
       case 'Sparkles':
         return <Sparkles className={className} />;
+      case 'Radio':
+        return <Radio className={className} />;
+      case 'Heart':
+        return <Heart className={className} />;
       case 'Youtube':
         return <Youtube className={className} />;
       case 'Mic':

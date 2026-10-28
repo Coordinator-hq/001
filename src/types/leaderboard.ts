@@ -4,9 +4,9 @@ export type SectorCategory =
   | 'movies'
   | 'comedy'
   | 'skits'
-  | 'x_influencers'
-  | 'instagram_influencers'
-  | 'tiktok_influencers'
+  | 'beauty_lifestyle'
+  | 'livestreamers'
+  | 'tiktokers'
   | 'bbnaija'
   | 'youtube_tech'
   | 'podcasts';
