@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { TwitterVerifiedBadge } from './TwitterVerifiedBadge';
 import { CelebrityAvatar } from './CelebrityAvatar';
+import { LaunchCountdown } from './LaunchCountdown';
 import { LeaderboardFigure, SectorCategory, LiveGiftEvent } from '../types/leaderboard';
 import { SECTOR_CONFIGS } from '../data/leaderboardData';
 
@@ -220,6 +221,8 @@ export const LeaderboardDashboard: React.FC<LeaderboardDashboardProps> = ({
       onMouseUp={handleMouseUp}
       className="w-full max-w-4xl mx-auto font-sans select-none animate-fadeIn pb-16 pt-2 sm:pt-4 px-2 sm:px-4 touch-pan-y uppercase tracking-wide cursor-grab active:cursor-grabbing"
     >
+      {/* Official Platform Launch Countdown */}
+      <LaunchCountdown />
 
       {/* Sector Category Navigation Tabs (Pill Switcher) */}
       <nav 
