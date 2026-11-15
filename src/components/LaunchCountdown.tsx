@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Clock, Crown } from 'lucide-react';
+import { Calendar, Clock } from 'lucide-react';
 
 // Target: January 25, 2027 at 00:00:00 WAT (UTC+1, Lagos Time)
 const LAUNCH_TIMESTAMP = new Date('2027-01-25T00:00:00+01:00').getTime();
@@ -56,14 +56,7 @@ export const LaunchCountdown: React.FC = () => {
       <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
         {/* Left: Launch Headline & Date Metadata */}
         <div className="min-w-0">
-          <div className="flex items-center gap-2 mb-1">
-            <Crown className="w-4 h-4 text-amber-400 shrink-0" />
-            <span className="text-xs font-black text-amber-400 tracking-widest">
-              FANWARS NIGERIA
-            </span>
-          </div>
-
-          <h1 className="text-base sm:text-lg font-black text-white tracking-wide leading-snug">
+          <h1 className="font-quirky text-lg sm:text-2xl font-normal tracking-wider leading-snug bg-gradient-to-r from-amber-200 via-amber-400 to-yellow-500 bg-clip-text text-transparent drop-shadow-[0_2px_10px_rgba(245,158,11,0.28)]">
             {timeLeft.isLive ? 'PLATFORM IS NOW LIVE' : 'COUNTDOWN TO OFFICIAL LAUNCH'}
           </h1>
 
