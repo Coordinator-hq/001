@@ -1,20 +1,9 @@
-export type SectorCategory = 
-  | 'master'
-  | 'music'
-  | 'movies'
-  | 'comedy'
-  | 'skits'
-  | 'beauty_lifestyle'
-  | 'livestreamers'
-  | 'tiktokers'
-  | 'bbnaija'
-  | 'youtube_tech'
-  | 'podcasts';
+export type SectorCategory = 'unilag_top_artistes';
 
 export interface LeaderboardFigure {
   id: string;
   name: string;
-  sector: Exclude<SectorCategory, 'master'>;
+  sector: SectorCategory;
   sectorLabel: string;
   tag: string;
   fandomName: string;
@@ -36,7 +25,7 @@ export interface LiveGiftEvent {
   amount: number;
   figureId: string;
   figureName: string;
-  sector: Exclude<SectorCategory, 'master'>;
+  sector: SectorCategory;
   sectorLabel: string;
   eventType: 'whale' | 'donation';
   message: string;

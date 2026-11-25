@@ -3,7 +3,7 @@ import { createServer as createViteServer } from 'vite';
 import http from 'http';
 import path from 'path';
 import fs from 'fs';
-import { INITIAL_FIGURES } from './src/data/leaderboardData.ts';
+import { INITIAL_FIGURES, FINAL_WEEK_HIGHLIGHTS } from './src/data/leaderboardData.ts';
 import { LeaderboardFigure, LiveGiftEvent } from './src/types/leaderboard.ts';
 
 const app = express();
@@ -117,11 +117,11 @@ if (pruneIdempotencyInterval.unref) {
 // -------------------------------------------------------------
 const masterFigures: Map<string, LeaderboardFigure> = new Map();
 INITIAL_FIGURES.forEach((fig) => {
-  masterFigures.set(fig.id, { ...fig, totalBalance: 0, fanCount: 0 });
+  masterFigures.set(fig.id, { ...fig });
 });
 
-// Strictly Authentic Live Gift Events Ledger: Starts completely empty
-let recentEvents: LiveGiftEvent[] = [];
+// Final week highlights from concluded UNILag Top Artistes campaign
+let recentEvents: LiveGiftEvent[] = [...FINAL_WEEK_HIGHLIGHTS];
 
 // Persistence file for verified real transactions
 const DATA_DIR = path.join(process.cwd(), 'data');
@@ -548,7 +548,7 @@ app.post('/api/flutterwave-webhook', (req, res) => {
     const amount = Number(payload.data.amount || 0);
 
     if (txRef && !redeemedTransactions.has(txRef)) {
-      const figureId = payload.data.meta?.figure_id || payload.data.meta?.team_id || 'davido';
+      const figureId = payload.data.meta?.figure_id || payload.data.meta?.team_id || 'cappoditutti';
       const figure = masterFigures.get(figureId);
 
       if (figure && amount >= 100) {

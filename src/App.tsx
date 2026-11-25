@@ -3,16 +3,16 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { LeaderboardDashboard } from './components/LeaderboardDashboard';
 import { GiftingModal } from './components/GiftingModal';
 import { LeaderboardFigure, LiveGiftEvent } from './types/leaderboard';
-import { INITIAL_FIGURES } from './data/leaderboardData';
+import { INITIAL_FIGURES, FINAL_WEEK_HIGHLIGHTS } from './data/leaderboardData';
 import { soundManager } from './utils/audio';
 
 const STORAGE_KEYS = {
-  FIGURES: 'fanwars_figures_100_real_v1',
-  EVENTS: 'fanwars_events_100_real_v1'
+  FIGURES: 'fanwars_unilag_top_artistes_v1',
+  EVENTS: 'fanwars_unilag_events_v1'
 };
 
 function getInitialLocalState(): {
@@ -20,13 +20,13 @@ function getInitialLocalState(): {
   events: LiveGiftEvent[];
 } {
   let loadedFigures: LeaderboardFigure[] = [...INITIAL_FIGURES];
-  let loadedEvents: LiveGiftEvent[] = [];
+  let loadedEvents: LiveGiftEvent[] = [...FINAL_WEEK_HIGHLIGHTS];
 
   const savedFigures = localStorage.getItem(STORAGE_KEYS.FIGURES);
   if (savedFigures) {
     try {
       const parsed = JSON.parse(savedFigures);
-      if (Array.isArray(parsed) && parsed.length >= 10) {
+      if (Array.isArray(parsed) && parsed.length === INITIAL_FIGURES.length) {
         loadedFigures = INITIAL_FIGURES.map((initFig) => {
           const saved = parsed.find((p: LeaderboardFigure) => p.id === initFig.id);
           if (!saved) return initFig;
@@ -50,7 +50,7 @@ function getInitialLocalState(): {
   if (savedEvents) {
     try {
       const parsedEvts = JSON.parse(savedEvents);
-      if (Array.isArray(parsedEvts)) {
+      if (Array.isArray(parsedEvts) && parsedEvts.length > 0) {
         loadedEvents = parsedEvts;
       }
     } catch (e) {
@@ -133,7 +133,6 @@ export default function App() {
                 setLiveEvents(data.recentEvents);
               }
             } else if (data.type === 'PAYMENT_VERIFIED') {
-              // Real verified payment broadcast from ANY user anywhere!
               if (data.updatedFigure) {
                 setFigures((prev) => {
                   return prev.map((f) => (f.id === data.updatedFigure.id ? data.updatedFigure : f));
@@ -144,7 +143,6 @@ export default function App() {
 
               if (data.event) {
                 setLiveEvents((prev) => [data.event, ...prev].slice(0, 50));
-                // Audio cue for whale gifts
                 if (data.event.amount >= 5000) {
                   soundManager.playLevelUp();
                 }
@@ -161,7 +159,6 @@ export default function App() {
             eventSource = null;
           }
           if (isMounted) {
-            // Reconnect after 3 seconds
             reconnectTimeout = setTimeout(connectSSE, 3000);
           }
         };
@@ -185,14 +182,13 @@ export default function App() {
     };
   }, []);
 
-  // Handle local optimistic gift completion (backed by server SSE)
   const handleGiftSuccess = (figureId: string, amount: number) => {
     const validAmount = Math.max(100, Math.floor(Number(amount) || 0));
     if (isNaN(validAmount) || validAmount <= 0) return;
 
-    let targetFigureName = 'Nigerian Star';
-    let targetSectorLabel = 'Leaderboard';
-    let targetSector: LeaderboardFigure['sector'] = 'music';
+    let targetFigureName = 'UNILag Artiste';
+    let targetSectorLabel = 'UNILag Top Artistes';
+    let targetSector: LeaderboardFigure['sector'] = 'unilag_top_artistes';
 
     setFigures((prevFigures) => {
       return prevFigures.map((f) => {
@@ -234,7 +230,7 @@ export default function App() {
         />
       </main>
 
-      {/* Gifting Modal with Flutterwave checkout and Server Verification */}
+      {/* Artiste Final Result & Profile Modal */}
       <GiftingModal
         figure={selectedFigureToGift}
         allFigures={figures}

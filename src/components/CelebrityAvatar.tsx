@@ -7,6 +7,14 @@ interface CelebrityAvatarProps {
   borderColor?: string;
 }
 
+const MONOGRAM_GRADIENTS = [
+  'from-amber-500/25 via-slate-900 to-slate-950 text-amber-300',
+  'from-emerald-500/25 via-slate-900 to-slate-950 text-emerald-300',
+  'from-sky-500/25 via-slate-900 to-slate-950 text-sky-300',
+  'from-violet-500/25 via-slate-900 to-slate-950 text-violet-300',
+  'from-rose-500/25 via-slate-900 to-slate-950 text-rose-300'
+];
+
 export const CelebrityAvatar: React.FC<CelebrityAvatarProps> = ({
   src,
   name,
@@ -24,12 +32,21 @@ export const CelebrityAvatar: React.FC<CelebrityAvatarProps> = ({
     return clean.slice(0, 2).toUpperCase();
   }, [name]);
 
-  if (hasError) {
+  const gradientClass = useMemo(() => {
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) {
+      hash = name.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    return MONOGRAM_GRADIENTS[Math.abs(hash) % MONOGRAM_GRADIENTS.length];
+  }, [name]);
+
+  if (!src || hasError) {
     return (
       <div
-        className={`${className} flex items-center justify-center font-black text-white bg-gradient-to-br from-slate-800 to-slate-900 border text-xs tracking-wider select-none shrink-0`}
-        style={borderColor ? { borderColor } : { borderColor: '#334155' }}
+        className={`${className} flex items-center justify-center font-black bg-gradient-to-br ${gradientClass} border border-slate-700/80 text-sm sm:text-base tracking-widest select-none shrink-0`}
+        style={borderColor ? { borderColor } : undefined}
         title={name}
+        aria-label={name}
       >
         {initials}
       </div>
@@ -41,6 +58,7 @@ export const CelebrityAvatar: React.FC<CelebrityAvatarProps> = ({
       src={src}
       alt={name}
       loading="lazy"
+      referrerPolicy="no-referrer"
       onError={() => setHasError(true)}
       className={`${className} object-cover shrink-0`}
       style={borderColor ? { borderColor } : undefined}
